@@ -16,24 +16,24 @@ from slicer import vtkMRMLScalarVolumeNode
 
 
 #
-# t_SegmentNasalSeptum
+# septum_analysis
 #
 
-class t_SegmentNasalSeptum(ScriptedLoadableModule):
+class septum_analysis(ScriptedLoadableModule):
     """Uses ScriptedLoadableModule base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "t_SegmentNasalSeptum"  # TODO: make this more human readable by adding spaces
+        self.parent.title = "septum_analysis"  # TODO: make this more human readable by adding spaces
         self.parent.categories = ["Examples"]  # TODO: set categories (folders where the module shows up in the module selector)
         self.parent.dependencies = []  # TODO: add here list of module names that this module requires
         self.parent.contributors = ["John Doe (AnyWare Corp.)"]  # TODO: replace with "Firstname Lastname (Organization)"
         # TODO: update with short description of the module and a link to online module documentation
         self.parent.helpText = """
 This is an example of scripted loadable module bundled in an extension.
-See more information in <a href="https://github.com/organization/projectname#t_SegmentNasalSeptum">module documentation</a>.
+See more information in <a href="https://github.com/organization/projectname#septum_analysis">module documentation</a>.
 """
         # TODO: replace with organization, grant and thanks
         self.parent.acknowledgementText = """
@@ -62,45 +62,45 @@ def registerSampleData():
     # To ensure that the source code repository remains small (can be downloaded and installed quickly)
     # it is recommended to store data sets that are larger than a few MB in a Github release.
 
-    # t_SegmentNasalSeptum1
+    # septum_analysis1
     SampleData.SampleDataLogic.registerCustomSampleDataSource(
         # Category and sample name displayed in Sample Data module
-        category='t_SegmentNasalSeptum',
-        sampleName='t_SegmentNasalSeptum1',
+        category='septum_analysis',
+        sampleName='septum_analysis1',
         # Thumbnail should have size of approximately 260x280 pixels and stored in Resources/Icons folder.
         # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
-        thumbnailFileName=os.path.join(iconsPath, 't_SegmentNasalSeptum1.png'),
+        thumbnailFileName=os.path.join(iconsPath, 'septum_analysis1.png'),
         # Download URL and target file name
         uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95",
-        fileNames='t_SegmentNasalSeptum1.nrrd',
+        fileNames='septum_analysis1.nrrd',
         # Checksum to ensure file integrity. Can be computed by this command:
         #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
         checksums='SHA256:998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95',
         # This node name will be used when the data set is loaded
-        nodeNames='t_SegmentNasalSeptum1'
+        nodeNames='septum_analysis1'
     )
 
-    # t_SegmentNasalSeptum2
+    # septum_analysis2
     SampleData.SampleDataLogic.registerCustomSampleDataSource(
         # Category and sample name displayed in Sample Data module
-        category='t_SegmentNasalSeptum',
-        sampleName='t_SegmentNasalSeptum2',
-        thumbnailFileName=os.path.join(iconsPath, 't_SegmentNasalSeptum2.png'),
+        category='septum_analysis',
+        sampleName='septum_analysis2',
+        thumbnailFileName=os.path.join(iconsPath, 'septum_analysis2.png'),
         # Download URL and target file name
         uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97",
-        fileNames='t_SegmentNasalSeptum2.nrrd',
+        fileNames='septum_analysis2.nrrd',
         checksums='SHA256:1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97',
         # This node name will be used when the data set is loaded
-        nodeNames='t_SegmentNasalSeptum2'
+        nodeNames='septum_analysis2'
     )
 
 
 #
-# t_SegmentNasalSeptumParameterNode
+# septum_analysisParameterNode
 #
 
 @parameterNodeWrapper
-class t_SegmentNasalSeptumParameterNode:
+class septum_analysisParameterNode:
     """
     The parameters needed by module.
 
@@ -118,10 +118,10 @@ class t_SegmentNasalSeptumParameterNode:
 
 
 #
-# t_SegmentNasalSeptumWidget
+# septum_analysisWidget
 #
 
-class t_SegmentNasalSeptumWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
@@ -144,7 +144,7 @@ class t_SegmentNasalSeptumWidget(ScriptedLoadableModuleWidget, VTKObservationMix
 
         # Load widget from .ui file (created by Qt Designer).
         # Additional widgets can be instantiated manually and added to self.layout.
-        uiWidget = slicer.util.loadUI(self.resourcePath('UI/t_SegmentNasalSeptum.ui'))
+        uiWidget = slicer.util.loadUI(self.resourcePath('UI/septum_analysis.ui'))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
 
@@ -155,7 +155,7 @@ class t_SegmentNasalSeptumWidget(ScriptedLoadableModuleWidget, VTKObservationMix
 
         # Create logic class. Logic implements all computations that should be possible to run
         # in batch mode, without a graphical user interface.
-        self.logic = t_SegmentNasalSeptumLogic()
+        self.logic = septum_analysisLogic()
 
         # Connections
 
@@ -222,7 +222,7 @@ class t_SegmentNasalSeptumWidget(ScriptedLoadableModuleWidget, VTKObservationMix
             if firstVolumeNode:
                 self._parameterNode.inputVolume = firstVolumeNode
 
-    def setParameterNode(self, inputParameterNode: Optional[t_SegmentNasalSeptumParameterNode]) -> None:
+    def setParameterNode(self, inputParameterNode: Optional[septum_analysisParameterNode]) -> None:
         """
         Set and observe parameter node.
         Observation is needed because when the parameter node is changed then the GUI must be updated immediately.
@@ -265,10 +265,10 @@ class t_SegmentNasalSeptumWidget(ScriptedLoadableModuleWidget, VTKObservationMix
 
 
 #
-# t_SegmentNasalSeptumLogic
+# septum_analysisLogic
 #
 
-class t_SegmentNasalSeptumLogic(ScriptedLoadableModuleLogic):
+class septum_analysisLogic(ScriptedLoadableModuleLogic):
     """This class should implement all the actual
     computation done by your module.  The interface
     should be such that other python code can import
@@ -285,7 +285,7 @@ class t_SegmentNasalSeptumLogic(ScriptedLoadableModuleLogic):
         ScriptedLoadableModuleLogic.__init__(self)
 
     def getParameterNode(self):
-        return t_SegmentNasalSeptumParameterNode(super().getParameterNode())
+        return septum_analysisParameterNode(super().getParameterNode())
 
     def process(self,
                 inputVolume: vtkMRMLScalarVolumeNode,
@@ -326,10 +326,10 @@ class t_SegmentNasalSeptumLogic(ScriptedLoadableModuleLogic):
 
 
 #
-# t_SegmentNasalSeptumTest
+# septum_analysisTest
 #
 
-class t_SegmentNasalSeptumTest(ScriptedLoadableModuleTest):
+class septum_analysisTest(ScriptedLoadableModuleTest):
     """
     This is the test case for your scripted module.
     Uses ScriptedLoadableModuleTest base class, available at:
@@ -345,9 +345,9 @@ class t_SegmentNasalSeptumTest(ScriptedLoadableModuleTest):
         """Run as few or as many tests as needed here.
         """
         self.setUp()
-        self.test_t_SegmentNasalSeptum1()
+        self.test_septum_analysis1()
 
-    def test_t_SegmentNasalSeptum1(self):
+    def test_septum_analysis1(self):
         """ Ideally you should have several levels of tests.  At the lowest level
         tests should exercise the functionality of the logic with different inputs
         (both valid and invalid).  At higher levels your tests should emulate the
@@ -365,7 +365,7 @@ class t_SegmentNasalSeptumTest(ScriptedLoadableModuleTest):
 
         import SampleData
         registerSampleData()
-        inputVolume = SampleData.downloadSample('t_SegmentNasalSeptum1')
+        inputVolume = SampleData.downloadSample('septum_analysis1')
         self.delayDisplay('Loaded test data set')
 
         inputScalarRange = inputVolume.GetImageData().GetScalarRange()
@@ -377,7 +377,7 @@ class t_SegmentNasalSeptumTest(ScriptedLoadableModuleTest):
 
         # Test the module logic
 
-        logic = t_SegmentNasalSeptumLogic()
+        logic = septum_analysisLogic()
 
         # Test algorithm with non-inverted threshold
         logic.process(inputVolume, outputVolume, threshold, True)

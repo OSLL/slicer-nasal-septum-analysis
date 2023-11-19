@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-set(MODULE_NAME t_SegmentNasalSeptum)
+set(MODULE_NAME septum_analysis)
 
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS

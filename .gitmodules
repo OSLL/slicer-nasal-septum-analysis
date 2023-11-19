@@ -1,0 +1,3 @@
+[submodule "SlicerAutomatedDentalTools"]
+	path = SlicerAutomatedDentalTools
+	url = https://github.com/DCBIA-OrthoLab/SlicerAutomatedDentalTools.git
