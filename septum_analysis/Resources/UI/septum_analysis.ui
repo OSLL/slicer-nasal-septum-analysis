@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>325</width>
+    <width>316</width>
     <height>311</height>
    </rect>
   </property>
@@ -15,6 +15,23 @@
     <widget class="QPushButton" name="downloadModelButton">
      <property name="text">
       <string>Download model</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Select file  to process</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkPathLineEdit" name="FileButton"/>
+   </item>
+   <item>
+    <widget class="QPushButton" name="ProcessButton">
+     <property name="text">
+      <string>Process</string>
      </property>
     </widget>
    </item>
@@ -47,6 +64,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>ctkPathLineEdit</class>
+   <extends>QWidget</extends>
+   <header>ctkPathLineEdit.h</header>
+  </customwidget>
   <customwidget>
    <class>qMRMLWidget</class>
    <extends>QWidget</extends>

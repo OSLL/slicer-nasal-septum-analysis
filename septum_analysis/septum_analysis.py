@@ -23,7 +23,7 @@ class septum_analysis(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
-        self.parent.categories = ["septum analysis"] 
+        self.parent.categories = ["septum_analysis"] 
         self.parent.dependencies = []
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
@@ -154,6 +154,8 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # Buttons
         self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
         self.ui.downloadModelButton.connect('clicked(bool)', self.onDownloadModelButton)
+        # TODO: add process for self.ui.FileButton.
+        self.ui.ProcessButton.connect('clicked(bool)', self.onProcessButton)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -297,6 +299,49 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             if not self.ui.downloadModelButton.enabled:
                 self.ui.downloadModelButton.text = "Model downloaded!"
                
+
+    def onProcessButton(self) -> None:
+        inputVolume = str(self.ui.FileButton.currentPath)
+        FOLDER_PATH = 'AMASSS_Models'
+        modelDirectory = str(os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH))
+
+        import tempfile
+
+        outputDirecotryObject = tempfile.TemporaryDirectory()
+        outputDirectory = outputDirecotryObject.name
+        
+        temporaryDirectoryObject = tempfile.TemporaryDirectory()
+        temporatyDirectory = temporaryDirectoryObject.name
+
+        print(temporatyDirectory)
+        print(outputDirectory)
+
+        args = {
+            "inputVolume": inputVolume,
+            "modelDirectory": modelDirectory,
+            "highDefinition": "false",
+            "skullStructure": " ".join(["MAX"]),
+            "merge": "SEPARATE",
+            "genVtk": "true",
+            "save_in_folder": "true",
+            "output_folder": outputDirectory,
+            "precision": 50,
+            "vtk_smooth": 1,
+            "prediction_ID": "Pred",
+            "gpu_usage": 5,
+            "cpu_usage": 5,
+            "SegmentInput": "false",
+            "DCMInput": "false",
+            "temp_fold": temporatyDirectory,
+        }
+
+        from SlicerAutomatedDentalTools.AMASSS_CLI import AMASSS_CLI
+
+        cliNode2 = slicer.cli.runSync(slicer.modules.amasss_cli, None, args)
+        slicer.mrmlScene.RemoveNode(cliNode2)
+
+        outputDirecotryObject.cleanup()
+        temporaryDirectoryObject.cleanup()
 
 #
 # septum_analysisLogic
