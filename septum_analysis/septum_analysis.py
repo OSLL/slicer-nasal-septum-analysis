@@ -23,7 +23,7 @@ class septum_analysis(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
-        self.parent.categories = ["septum analysis"] 
+        self.parent.categories = ["septum_analysis"] 
         self.parent.dependencies = []
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
@@ -153,6 +153,9 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         # Buttons
         self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+        self.ui.downloadModelButton.connect('clicked(bool)', self.onDownloadModelButton)
+        # TODO: add process for self.ui.FileButton.
+        self.ui.ProcessButton.connect('clicked(bool)', self.onProcessButton)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -251,6 +254,94 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                 self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
                                    self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
 
+    
+    '''
+    Downloads models if it was not already downloaded.
+    Returns true if successful.
+    '''
+    def downloadModels(self) -> bool:
+        import requests
+
+        MODELS_LINK = 'https://github.com/lucanchling/AMASSS_CBCT/releases/download/v1.0.2/AMASSS_Models.zip'
+        FILE_NAME = 'AMASSS_Models.zip'
+        FOLDER_PATH = 'AMASSS_Models'
+        
+        modelsPath = os.path.join(os.path.dirname(__file__), 'Resources', FILE_NAME)
+        modelsFolderPath = os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH)
+
+        if os.path.exists(modelsFolderPath):
+            return True
+
+        with open(modelsPath, 'wb') as modelsFile:
+            response = requests.get(MODELS_LINK, allow_redirects=True, stream=True)
+            total_length = int(response.headers.get('content-length'))
+            progress = slicer.util.createProgressDialog(value=0, maximum=total_length)
+
+            downloaded = 0
+            for data in response.iter_content(chunk_size=1024*1024):
+                downloaded += len(data)
+                modelsFile.write(data)
+                if progress.wasCanceled:
+                    return False
+                slicer.app.processEvents()
+                progress.setValue(downloaded)
+
+        import zipfile
+        with zipfile.ZipFile(modelsPath, 'r') as zip_ref:
+            zip_ref.extractall(modelsFolderPath)
+
+        os.remove(modelsPath)
+        return True
+
+    def onDownloadModelButton(self) -> None:
+        with slicer.util.tryWithErrorDisplay("Unable to download!", waitCursor=True):
+            self.ui.downloadModelButton.enabled = not self.downloadModels()
+            if not self.ui.downloadModelButton.enabled:
+                self.ui.downloadModelButton.text = "Model downloaded!"
+               
+
+    def onProcessButton(self) -> None:
+        inputVolume = str(self.ui.FileButton.currentPath)
+        FOLDER_PATH = 'AMASSS_Models'
+        modelDirectory = str(os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH))
+
+        import tempfile
+
+        outputDirecotryObject = tempfile.TemporaryDirectory()
+        outputDirectory = outputDirecotryObject.name
+        
+        temporaryDirectoryObject = tempfile.TemporaryDirectory()
+        temporatyDirectory = temporaryDirectoryObject.name
+
+        print(temporatyDirectory)
+        print(outputDirectory)
+
+        args = {
+            "inputVolume": inputVolume,
+            "modelDirectory": modelDirectory,
+            "highDefinition": "false",
+            "skullStructure": " ".join(["MAX"]),
+            "merge": "SEPARATE",
+            "genVtk": "true",
+            "save_in_folder": "true",
+            "output_folder": outputDirectory,
+            "precision": 50,
+            "vtk_smooth": 1,
+            "prediction_ID": "Pred",
+            "gpu_usage": 5,
+            "cpu_usage": 5,
+            "SegmentInput": "false",
+            "DCMInput": "false",
+            "temp_fold": temporatyDirectory,
+        }
+
+        from SlicerAutomatedDentalTools.AMASSS_CLI import AMASSS_CLI
+
+        cliNode2 = slicer.cli.runSync(slicer.modules.amasss_cli, None, args)
+        slicer.mrmlScene.RemoveNode(cliNode2)
+
+        outputDirecotryObject.cleanup()
+        temporaryDirectoryObject.cleanup()
 
 #
 # septum_analysisLogic
