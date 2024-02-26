@@ -2,6 +2,7 @@ import logging
 
 import vtk
 import slicer
+from typing import List
 
 import SegmentStatistics
 import inspect
@@ -30,90 +31,102 @@ import SegmentEditorEffects
 
 
 class CalculatorVolume:
-    MARGIN_SIZE_IN_MM = 1.5
+    def __init__(self, marginSizeInMm: float):
+        self.marginSizeInMm = marginSizeInMm
+        self.volumeNode = None
+        self.segmentationNode = None
 
-    def calculateVolume(self, volumeNode: vtkMRMLScalarVolumeNode, segmentationNode: vtkSegmentation) -> None:
-        if volumeNode is None or segmentationNode is None:
-            return
+    def setVolumeNode(self, volumeNode: vtkMRMLScalarVolumeNode) -> None:
+        self.volumeNode = volumeNode
+
+    def setSegmentationNode(self, segmentationNode: vtkMRMLSegmentationNode) -> None:
+        self.segmentationNode = segmentationNode
+
+    def setMarginSize(self, sizeInMm: float) -> None:
+        self.marginSizeInMm = sizeInMm
+
+    def saveResultsToTable(self, tableNode: vtkMRMLTableNode):
+        if self.segmentationNode is None:
+            raise ValueError("Segmentation node not selected")
+        if tableNode is None:
+            raise ValueError("Table node not selected")
+        if self.segmentationNode.GetSegmentation().GetNumberOfSegments() == 0:
+            raise ValueError("Segmentation node has zero number of segments")
+
+        self.segmentationNode.CreateClosedSurfaceRepresentation()
+
+        statisticsLogic: SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
+        statisticsLogic.getParameterNode().SetParameter("Segmentation", self.segmentationNode.GetID())
+        statisticsLogic.computeStatistics()
+        statisticsLogic.exportToTable(tableNode, nonEmptyKeysOnly=True)
+
+
+    def calculateVolume(
+            self,
+            segmentName: str,
+            autoThresholdMethod,
+            cursorPosition: List[int],
+            sliceWidget
+    ) -> None:
+        if self.volumeNode is None:
+            raise ValueError("Volume node not selected")
+        if self.segmentationNode is None:
+            raise ValueError("Segmentation node not selected")
+        if segmentName is None:
+            raise ValueError("Segment name is none")
+
+        if len(cursorPosition) != 3:
+            raise ValueError("List should have exactly 3 elements")
 
         # Работа с эффектами взята отсюда
         # https://gist.github.com/lassoan/1673b25d8e7913cbc245b4f09ed853f9
-
-        thresholdRange = volumeNode.GetImageData().GetScalarRange()
-        originVector = volumeNode.GetOrigin()
-
-        segmentationNode.CreateDefaultDisplayNodes()  # only needed for display
-        segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)
-
-        segmentation: vtkSegmentation = segmentationNode.GetSegmentation()
-        addedSegmentID = segmentation.AddEmptySegment("Overall")
+        segmentation: vtkSegmentation = self.segmentationNode.GetSegmentation()
 
         segmentEditorWidget: Optional[SegmentEditorWidget] = slicer.qMRMLSegmentEditorWidget()
         segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
-        segmentEditorNode: Optional[vtkMRMLSegmentEditorNode] = None
+        segmentEditorNode: vtkMRMLSegmentEditorNode = slicer.mrmlScene.AddNewNodeByClass(
+            "vtkMRMLSegmentEditorNode"
+        )
         try:
-            segmentEditorNode: vtkMRMLSegmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
             segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
-            segmentEditorWidget.setSegmentationNode(segmentationNode)
-            segmentEditorWidget.setMasterVolumeNode(volumeNode)
+            segmentEditorWidget.setSegmentationNode(self.segmentationNode)
+            segmentEditorWidget.setMasterVolumeNode(self.volumeNode)
 
-            segmentEditorWidget.setActiveEffectByName("Threshold")
+            currentSegmentID = segmentation.GetSegmentIdBySegmentName(segmentName)
+            if currentSegmentID == "" or currentSegmentID is None:
+                currentSegmentID = segmentation.AddEmptySegment(segmentName, segmentName)
+
+            segmentEditorNode.SetSelectedSegmentID(currentSegmentID)
+
+            segmentEditorWidget.setActiveEffectByName("Local Threshold")
             effect = segmentEditorWidget.activeEffect()
-            effect.setParameter("MinimumThreshold", thresholdRange[0])
-            effect.self().autoThreshold(SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH,
-                                        SegmentEditorEffects.MODE_SET_MIN_UPPER)
-            effect.self().onApply()
+            effect.self().autoThreshold(autoThresholdMethod, SegmentEditorEffects.MODE_SET_MIN_UPPER)
+            effect.setParameter("SegmentationAlgorithm", "GrowCut")
+
+            sourceImageData = effect.self().scriptedEffect.sourceVolumeImageData()
+            ijk = effect.self().xyToIjk([cursorPosition[0], cursorPosition[1]], sliceWidget, sourceImageData)
+
+            ijkPoints = vtk.vtkPoints()
+            ijkPoints.InsertNextPoint(ijk[0], ijk[1], ijk[2])
+            effect.self().scriptedEffect.parameterSetNode()
+            effect.self().apply(ijkPoints)
 
             segmentEditorWidget.setActiveEffectByName("Margin")
             effect = segmentEditorWidget.activeEffect()
-            effect.setParameter("MarginSizeMm", -self.MARGIN_SIZE_IN_MM)
+            effect.setParameter("MarginSizeMm", -self.marginSizeInMm)
             effect.self().onApply()
 
             segmentEditorWidget.setActiveEffectByName("Islands")
             effect = segmentEditorWidget.activeEffect()
-            effect.setParameter("Operation", SegmentEditorEffects.SPLIT_ISLANDS_TO_SEGMENTS)
-            effect.setParameter("MinimumSize", 70000)
+            effect.setParameter("Operation", SegmentEditorEffects.REMOVE_SMALL_ISLANDS)
+            effect.setParameter("MinimumSize", 1000)
             effect.self().onApply()
-
-            # TODO: там на самом деле может остаться не три сегмента и самым первым может оказаться не лишний
-            segmentation.RemoveSegment(addedSegmentID)
-
-            leftSegment: vtkSegment = segmentation.GetNthSegment(0)
-            leftSegment.SetNameAutoGenerated(False)
-            leftSegment.SetName("Left")
-
-            rightSegment: vtkSegment = segmentation.GetNthSegment(1)
-            rightSegment.SetNameAutoGenerated(False)
-            rightSegment.SetName("Right")
-
-            segmentEditorNode.SetSelectedSegmentID(segmentation.GetNthSegmentID(0))
 
             segmentEditorWidget.setActiveEffectByName("Margin")
             effect = segmentEditorWidget.activeEffect()
-            effect.setParameter("MarginSizeMm", self.MARGIN_SIZE_IN_MM)
+            effect.setParameter("MarginSizeMm", self.marginSizeInMm)
             effect.self().onApply()
 
-            segmentEditorNode.SetSelectedSegmentID(segmentation.GetNthSegmentID(1))
-
-            segmentEditorWidget.setActiveEffectByName("Margin")
-            effect = segmentEditorWidget.activeEffect()
-            effect.setParameter("MarginSizeMm", self.MARGIN_SIZE_IN_MM)
-            effect.self().onApply()
-
-            segmentEditorWidget = None
-
+            segmentEditorWidget.setActiveEffectByName(None)
         finally:
             slicer.mrmlScene.RemoveNode(segmentEditorNode)
-
-        segmentationNode.CreateClosedSurfaceRepresentation()
-
-        tableNode: vtkMRMLTableNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTableNode", "Volume statistics")
-
-        statisticsLogic: SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
-        statisticsLogic.getParameterNode().SetParameter("Segmentation", segmentationNode.GetID())
-        statisticsLogic.computeStatistics()
-        statisticsLogic.computeStatistics()
-        statisticsLogic.exportToTable(tableNode, nonEmptyKeysOnly=True)
-
-        tableWidget = slicer.app.layoutManager().tableWidget(0)
-        tableWidget.tableView().setMRMLTableNode(tableNode)

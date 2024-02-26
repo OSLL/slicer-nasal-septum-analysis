@@ -5,10 +5,7 @@ from typing import Annotated, Optional
 import vtk
 
 import slicer
-from septum_analysisLib import (
-    CalculatorVolume,
-    CalculatorVolumeWidget
-)
+from septum_analysisLib import *
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from slicer.parameterNodeWrapper import (
@@ -173,6 +170,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Called when the application closes and the module widget is destroyed.
         """
         self.removeObservers()
+        self.calculatorVolumeWidget.cleanup()
 
     def enter(self) -> None:
         """
@@ -180,11 +178,13 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         # Make sure parameter node exists and observed
         self.initializeParameterNode()
+        self.calculatorVolumeWidget.enter()
 
     def exit(self) -> None:
         """
         Called each time the user opens a different module.
         """
+        self.calculatorVolumeWidget.exit()
         # Do not react to parameter node changes (GUI will be updated when the user enters into the module)
         if self._parameterNode:
             self._parameterNode.disconnectGui(self._parameterNodeGuiTag)

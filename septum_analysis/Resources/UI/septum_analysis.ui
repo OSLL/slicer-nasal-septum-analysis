@@ -9,15 +9,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>319</width>
-    <height>311</height>
+    <width>316</width>
+    <height>412</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="ctkCollapsibleButton" name="calculatorVolumeCategory">
      <property name="text">
-      <string>Calculater Volume</string>
+      <string>Calculator Volume</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -62,15 +62,122 @@
           <property name="hideChildNodeTypes">
            <stringlist notr="true"/>
           </property>
+          <property name="noneEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="renameEnabled">
+           <bool>true</bool>
+          </property>
           <property name="interactionNodeSingletonTag">
            <string notr="true"/>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="calculateVolume">
+         <widget class="QComboBox" name="autothrsholdMethod"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="namesSegmentsForCalculateVolumeCategory">
+        <item>
+         <widget class="QRadioButton" name="leftSinusButton">
           <property name="text">
-           <string>Calculate volume</string>
+           <string>Left Sinus</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="rightSinusButton">
+          <property name="text">
+           <string>Right Sinus</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="customNameLayout">
+          <item>
+           <widget class="QRadioButton" name="customNameSegmentButtonForCalculateVolume">
+            <property name="text">
+             <string>Custom</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="customNameSegmentForCalculateVolume">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="accessibleName">
+             <string/>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="placeholderText">
+             <string>Enter other name</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <property name="midLineWidth">
+         <number>2</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="saverInTableCategory">
+        <item>
+         <widget class="qMRMLNodeComboBox" name="tableNodeForCalculateVolume">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLTableNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="editEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="renameEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="saveInTableButton">
+          <property name="text">
+           <string>Save In Table</string>
           </property>
          </widget>
         </item>
@@ -219,6 +326,22 @@
     <hint type="destinationlabel">
      <x>157</x>
      <y>81</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>septum_analysis</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>tableNodeForCalculateVolume</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>159</x>
+     <y>157</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>159</x>
+     <y>165</y>
     </hint>
    </hints>
   </connection>
