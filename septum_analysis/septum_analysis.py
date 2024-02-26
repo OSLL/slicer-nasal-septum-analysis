@@ -5,6 +5,10 @@ from typing import Annotated, Optional
 import vtk
 
 import slicer
+from septum_analysisLib import (
+    CalculatorVolume,
+    CalculatorVolumeWidget
+)
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from slicer.parameterNodeWrapper import (
@@ -123,6 +127,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.logic = None
         self._parameterNode = None
         self._parameterNodeGuiTag = None
+        self.calculatorVolumeWidget = CalculatorVolumeWidget()
 
     def setup(self) -> None:
         """
@@ -135,6 +140,9 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         uiWidget = slicer.util.loadUI(self.resourcePath('UI/septum_analysis.ui'))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
+        self.calculatorVolumeWidget.setup(
+            slicer.util.childWidgetVariables(self.ui.calculatorVolumeCategory)
+        )
 
         # Set scene in MRML widgets. Make sure that in Qt designer the top-level qMRMLWidget's
         # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.

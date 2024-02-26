@@ -4,6 +4,9 @@ set(MODULE_NAME septum_analysis)
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
+  ${MODULE_NAME}Lib/__init__.py
+  ${MODULE_NAME}Lib/CalculatorVolume.py
+  ${MODULE_NAME}Lib/CalculatorVolumeWidget.py
   )
 
 set(MODULE_PYTHON_RESOURCES
