@@ -165,6 +165,21 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
 
+    def onReload(self):
+        packageName = self.moduleName + 'Lib'
+        logging.debug("Reloading " + packageName)
+        submoduleNames = ['CalculatorVolume', 'CalculatorVolumeWidget', 'SmartLocalThresholdEditorEffect']
+        import imp
+        f, filename, description = imp.find_module(packageName)
+        package = imp.load_module(packageName, f, filename, description)
+        for submoduleName in submoduleNames:
+            f, filename, description = imp.find_module(submoduleName, package.__path__)
+            try:
+                imp.load_module(packageName + '.' + submoduleName, f, filename, description)
+            finally:
+                f.close()
+        ScriptedLoadableModuleWidget.onReload(self)
+
     def cleanup(self) -> None:
         """
         Called when the application closes and the module widget is destroyed.

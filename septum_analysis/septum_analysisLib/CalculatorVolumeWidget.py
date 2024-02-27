@@ -1,23 +1,42 @@
-import vtk
 import slicer
-from .CalculatorVolume import *
+import vtk
 from MRMLCorePython import vtkMRMLDisplayableNode
+
+from .CalculatorVolume import *
 
 
 class CalculatorVolumeWidget:
-    DEFAULT_MARGIN_SIZE_IN_MM = 1.6
+    DEFAULT_MARGIN_SIZE_IN_MM = 1.0
+    DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION = 3.5
 
     def __init__(self) -> None:
         self.nodeAddedId = None
-        self.leftButtonPressedId = None
         self.sliceWidget = None
         self.interactor = None
         self.crosshairNode = None
         self.ui = None
         self.getterSegmentName = None
-        self.logic = CalculatorVolume(self.DEFAULT_MARGIN_SIZE_IN_MM)
+        self.logic = CalculatorVolume(
+            self.DEFAULT_MARGIN_SIZE_IN_MM,
+            self.DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION,
+            SegmentEditorEffects.METHOD_TRIANGLE
+        )
 
     def setup(self, uiCalculaterVolumeCategory) -> None:
+        def registerEditorEffect():
+            import os
+            import qt
+            import slicer.ScriptedLoadableModule
+
+            import qSlicerSegmentationsEditorEffectsPythonQt as qSlicerSegmentationsEditorEffects
+            instance = qSlicerSegmentationsEditorEffects.qSlicerSegmentEditorScriptedEffect(None)
+            effectFilename = os.path.join(os.path.dirname(__file__),
+                                          'SmartLocalThresholdEditorEffect.py')
+            instance.setPythonSource(effectFilename.replace('\\', '/'))
+            instance.self().register()
+
+        registerEditorEffect()
+
         layoutManager = slicer.app.layoutManager()
         self.sliceWidget = layoutManager.sliceWidget("Red")
         sliceView = self.sliceWidget.sliceView()
@@ -34,8 +53,13 @@ class CalculatorVolumeWidget:
             "currentNodeChanged(vtkMRMLNode*)", self.onSegmentationChanged
         )
 
-        self.ui.autothrsholdMethod.addItem("Huang", SegmentEditorEffects.METHOD_HUANG)
-        self.ui.autothrsholdMethod.addItem("IsoData", SegmentEditorEffects.METHOD_ISO_DATA)
+        self.ui.thresholdOffset.connect("valueChanged(double)", lambda value: self.logic.setOffsetThreshold(value))
+        self.ui.isPreviewCheckBox.connect("clicked(bool)", lambda value: self.logic.setIsPreviewState(value))
+
+        self.ui.autothresholdMethod.addItem("Triangle", SegmentEditorEffects.METHOD_TRIANGLE)
+        self.ui.autothresholdMethod.addItem("Kittler Illingworth", SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH)
+        self.ui.autothresholdMethod.addItem("Otsu", SegmentEditorEffects.METHOD_OTSU)
+        self.ui.autothresholdMethod.connect("currentIndexChanged(int)", self.onAutoThresholdChanged)
 
         self.ui.leftSinusButton.setChecked(True)
         self.setGetterSegmentName(ConstGetterNameSegment(self.ui.leftSinusButton.text))
@@ -51,24 +75,23 @@ class CalculatorVolumeWidget:
         )
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
+        self.enter()
 
     def cleanup(self):
         self.exit()
 
     def enter(self) -> None:
-        self.leftButtonPressedId = self.interactor.AddObserver(
-            vtk.vtkCommand.LeftButtonReleaseEvent, self.onLeftButtonPressed
-        )
         self.nodeAddedId = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAddedOnScene)
 
         self.showOnlyCurrentVolume()
         self.showOnlyCurrentSegmentation()
+        self.logic.enter()
 
     def exit(self) -> None:
-        self.interactor.RemoveObserver(self.leftButtonPressedId)
         slicer.mrmlScene.RemoveObserver(self.nodeAddedId)
-        self.leftButtonPressedId = None
         self.nodeAddedId = None
+        self.logic.turnOffTool()
+        self.logic.exit()
 
     def setGetterSegmentName(self, getterSegmentName):
         if self.getterSegmentName is not None:
@@ -77,6 +100,12 @@ class CalculatorVolumeWidget:
         if self.getterSegmentName is not None:
             self.getterSegmentName.enable()
 
+        self.logic.setSegmentName(getterSegmentName.get())
+
+    def onAutoThresholdChanged(self, changedIndex: int):
+        autoThresholdMethod = self.ui.autothresholdMethod.itemData(changedIndex)
+        self.logic.setAutoThresholdMethod(autoThresholdMethod)
+
     @vtk.calldata_type(vtk.VTK_OBJECT)
     def onNodeAddedOnScene(self, caller, eventId, callData):
         if callData.IsA("vtkMRMLScalarVolumeNode"):
@@ -84,6 +113,7 @@ class CalculatorVolumeWidget:
             if callData.GetID() == sliceViewer.GetBackgroundVolumeID():
                 self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(callData.GetID())
 
+    # TODO: нужно у самой сегментации менять вольюм -- погуглить
     def onVolumeChanged(self):
         volumeNode = self.ui.volumeNodeForCalculateVolume.currentNode()
         self.logic.setVolumeNode(volumeNode)
@@ -132,19 +162,6 @@ class CalculatorVolumeWidget:
         nodes = slicer.util.getNodesByClass(typeNode)
         for itNode in nodes:
             itNode.SetDisplayVisibility(1 if itNode == targetNode else 0)
-
-    def onLeftButtonPressed(self, observer, eventId):
-        position = [0, 0, 0]
-        self.crosshairNode.GetCursorPositionXYZ(position)
-
-        with slicer.util.tryWithErrorDisplay("Failed to calculate volume", waitCursor=True):
-            methodIndex = self.ui.autothrsholdMethod.currentIndex
-            autoThresholdMethod = self.ui.autothrsholdMethod.itemData(methodIndex)
-
-            self.logic.calculateVolume(
-                self.getterSegmentName.get(), autoThresholdMethod, position, self.sliceWidget
-            )
-            self.logic.segmentationNode.CreateClosedSurfaceRepresentation()
 
     def onSaveInTable(self):
         tableNode: vtkMRMLTableNode = self.ui.tableNodeForCalculateVolume.currentNode()
