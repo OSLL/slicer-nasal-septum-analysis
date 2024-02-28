@@ -45,6 +45,18 @@
         </item>
         <item>
          <widget class="qMRMLNodeComboBox" name="volumeNodeForCalculateVolume">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>230</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="toolTip">
            <string>Volume to calculate volume</string>
           </property>
@@ -76,26 +88,6 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QCheckBox" name="isPreviewCheckBox">
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="text">
-           <string>IsPreview</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="autothresholdMethod"/>
-        </item>
-       </layout>
-      </item>
-      <item>
        <layout class="QHBoxLayout" name="thresholdOffsetField">
         <item>
          <widget class="QLabel" name="thresholdOffsetLabel">
@@ -117,10 +109,46 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QComboBox" name="autothresholdMethod"/>
+        </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="namesSegmentsForCalculateVolumeCategory">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="qMRMLSegmentationShow3DButton" name="segmentationShow3DButton"/>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="isPreviewCheckBox">
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="text">
+           <string>IsPreview</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="midLineWidth">
+         <number>2</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="namesSegmentsForCalculateVolumeCategory" stretch="1,5">
         <item>
          <widget class="QRadioButton" name="leftSinusButton">
           <property name="text">
@@ -139,23 +167,8 @@
       </item>
       <item>
        <widget class="Line" name="line">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
         <property name="frameShadow">
          <enum>QFrame::Plain</enum>
-        </property>
-        <property name="lineWidth">
-         <number>1</number>
         </property>
         <property name="midLineWidth">
          <number>2</number>
@@ -196,6 +209,13 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarForCalculatorVolume">
+        <property name="value">
+         <number>24</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -293,6 +313,11 @@
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>ctkMenuButton</class>
+   <extends>QPushButton</extends>
+   <header>ctkMenuButton.h</header>
+  </customwidget>
+  <customwidget>
    <class>ctkPathLineEdit</class>
    <extends>QWidget</extends>
    <header>ctkPathLineEdit.h</header>
@@ -317,6 +342,11 @@
    <extends>QWidget</extends>
    <header>qMRMLWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLSegmentationShow3DButton</class>
+   <extends>ctkMenuButton</extends>
+   <header>qMRMLSegmentationShow3DButton.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

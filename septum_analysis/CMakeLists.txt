@@ -8,6 +8,7 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}Lib/CalculatorVolume.py
   ${MODULE_NAME}Lib/CalculatorVolumeWidget.py
   ${MODULE_NAME}Lib/SelectingClosedSurfaceEditorEffect.py
+  ${MODULE_NAME}Lib/PipelineApplierLogic.py
   ${MODULE_NAME}Lib/utils.py
   )
 

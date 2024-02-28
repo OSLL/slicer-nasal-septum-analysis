@@ -1,5 +1,6 @@
 from SegmentEditorLocalThresholdLib import *
 from .CalculatorVolume import *
+from .PipelineApplierLogic import *
 
 
 class SelectingClosedSurfaceEditorEffect(SegmentEditorEffect):
@@ -32,101 +33,79 @@ class SelectingClosedSurfaceEditorEffect(SegmentEditorEffect):
         self.applyLogic = applyLogic
 
 
-class ApplierLogicWithManyMargins:
-    DEFAULT_MARGIN_SIZE_IN_MM = 1.0
-    DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION = 3.5
-
-    def __init__(
-            self,
-            defaultMarginSizeInMm: float = DEFAULT_MARGIN_SIZE_IN_MM,
-            minimumDiameterInMM: float = DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION
-    ):
-        self.marginSizeInMm = defaultMarginSizeInMm
-        self.minimumDiameterInMm = minimumDiameterInMM
-
-    def apply(self, calculatorVolume: CalculatorVolume, ijkPoints):
-        segmentEditorWidget = calculatorVolume.segmentEditorWidget
-
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("SegmentationAlgorithm", "GrowCut")
-        effect.setParameter("MinimumDiameterMm", self.minimumDiameterInMm)
-        effect.self().apply(ijkPoints)
-
-        segmentEditorWidget.setActiveEffectByName("Margin")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("MarginSizeMm", -self.marginSizeInMm)
-        effect.self().onApply()
-
-        segmentEditorWidget.setActiveEffectByName("Smoothing")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("SmoothingMethod", SegmentEditorEffects.MORPHOLOGICAL_OPENING)
-        effect.self().onApply()
-
-        segmentEditorWidget.setActiveEffectByName("Islands")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("Operation", SegmentEditorEffects.REMOVE_SMALL_ISLANDS)
-        effect.setParameter("MinimumSize", 3000)
-        effect.self().onApply()
-
-        segmentEditorWidget.setActiveEffectByName("Margin")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("MarginSizeMm", self.marginSizeInMm)
-        effect.self().onApply()
-
-
 class ApplierLogicWithMask:
     DEFAULT_MINIMUM_DIAMETER = 1.0
     DEFAULT_CLOSING_SMOOTHING_SIZE = 1.5
+    DEFAULT_CLOSING_SMOOTHING_SIZE_FOR_END = 1.5
 
-    def __init__(self):
+    class Data:
+        def __init__(self, calculatorVolume: CalculatorVolume, ijkPoints):
+            self.prevSegmentID = None
+            self.maskSegmentID = None
+            self.segmentation: Optional[vtkSegmentation] = None
+
+            self.calculatorVolume = calculatorVolume
+            self.ijkPoints = ijkPoints
+            self.segmentEditorWidget = calculatorVolume.segmentEditorWidget
+            self.volumeImageData = calculatorVolume.volumeNode.GetImageData()
+            self.sourceVolumeMin, self.sourceVolumeMax = self.volumeImageData.GetScalarRange()
+            self.threshold = calculatorVolume.maximumThreshold + calculatorVolume.offsetThreshold
+
+    def __init__(self, updaterActions):
         self.minimumDiameter = self.DEFAULT_MINIMUM_DIAMETER
         self.closingSmoothingSize = self.DEFAULT_CLOSING_SMOOTHING_SIZE
+        self.closingSmoothingSizeForEnd = self.DEFAULT_CLOSING_SMOOTHING_SIZE_FOR_END
+        self.pipeline = PipelineApplierLogic(
+            updaterActions,
+            lambda calculatorVolume, ijkPoints: ApplierLogicWithMask.Data(calculatorVolume, ijkPoints)
+        )
+
+        def createAndSetMaskSegment(data: ApplierLogicWithMask.Data):
+            data.prevSegmentID = data.calculatorVolume.segmentEditorNode.GetSelectedSegmentID()
+            data.segmentation = data.calculatorVolume.segmentationNode.GetSegmentation()
+            data.maskSegmentID = data.segmentation.AddEmptySegment("__Mask__", "Mask")
+            data.calculatorVolume.segmentEditorNode.SetSelectedSegmentID(data.maskSegmentID)
+
+        self.pipeline.addAction(createAndSetMaskSegment)
+        self.pipeline.addAction(EditorEffectAction('Threshold', {
+            'MinimumThreshold': lambda data: data.threshold,
+            'MaximumThreshold': lambda data: data.sourceVolumeMax,
+        }))
+        self.pipeline.addAction(EditorEffectAction('Smoothing', {
+            'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
+            'KernelSizeMm': lambda _: self.closingSmoothingSize,
+        }))
+        self.pipeline.addAction(EditorEffectAction('Logical operators', {
+            'Operation': lambda _: SegmentEditorEffects.LOGICAL_INVERT,
+        }))
+
+        def changeCurrentNodeAndMaskNode(data: ApplierLogicWithMask.Data):
+            data.calculatorVolume.segmentEditorNode.SetSelectedSegmentID(data.prevSegmentID)
+            data.calculatorVolume.segmentEditorNode.SetMaskSegmentID(data.maskSegmentID)
+            data.calculatorVolume.segmentEditorNode.SetMaskMode(vtkMRMLSegmentationNode.EditAllowedInsideSingleSegment)
+
+        self.pipeline.addAction(changeCurrentNodeAndMaskNode)
+        self.pipeline.addAction(EditorEffectAction('Selecting Closed Surface', {
+            'MinimumThreshold': lambda data: data.sourceVolumeMin,
+            'MaximumThreshold': lambda data: data.threshold,
+            'SegmentationAlgorithm': lambda data: 'GrowCut',
+            'MinimumDiameterMm': lambda data: self.minimumDiameter
+        }, lambda data, effect: effect.self().apply(data.ijkPoints)))
+
+        def returnMaskNodeAndRemoveMaskSegments(data: ApplierLogicWithMask.Data):
+            data.calculatorVolume.segmentEditorNode.SetMaskMode(vtkMRMLSegmentationNode.EditAllowedEverywhere)
+            data.calculatorVolume.segmentEditorNode.SetMaskSegmentID(None)
+            data.segmentation.RemoveSegment(data.maskSegmentID)
+
+        self.pipeline.addAction(returnMaskNodeAndRemoveMaskSegments)
+        self.pipeline.addAction(EditorEffectAction('Islands', {
+            'Operation': lambda _: SegmentEditorEffects.REMOVE_SMALL_ISLANDS,
+            'MinimumSize': lambda _: 3000,
+        }))
+        self.pipeline.addAction(EditorEffectAction('Smoothing', {
+            'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
+            'KernelSizeMm': lambda _: self.closingSmoothingSizeForEnd,
+        }))
 
     def apply(self, calculatorVolume: CalculatorVolume, ijkPoints):
-        segmentEditorWidget = calculatorVolume.segmentEditorWidget
-        volumeImageData = calculatorVolume.volumeNode.GetImageData()
-        sourceVolumeMin, sourceVolumeMax = volumeImageData.GetScalarRange()
-
-        prevSegmentID = calculatorVolume.segmentEditorNode.GetSelectedSegmentID()
-        segmentation: vtkSegmentation = calculatorVolume.segmentationNode.GetSegmentation()
-        maskSegmentID = segmentation.AddEmptySegment("__Mask__", "Mask")
-        calculatorVolume.segmentEditorNode.SetSelectedSegmentID(maskSegmentID)
-
-        segmentEditorWidget.setActiveEffectByName("Threshold")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("MinimumThreshold", calculatorVolume.maximumThreshold + calculatorVolume.offsetThreshold)
-        effect.setParameter("MaximumThreshold", sourceVolumeMax)
-        effect.self().onApply()
-
-        segmentEditorWidget.setActiveEffectByName("Smoothing")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("SmoothingMethod", SegmentEditorEffects.MORPHOLOGICAL_CLOSING)
-        effect.setParameter("KernelSizeMm", self.closingSmoothingSize)
-        effect.self().onApply()
-
-        calculatorVolume.segmentEditorNode.SetSelectedSegmentID(prevSegmentID)
-        # В идеале делать инвёрт маски черещ булеан инструмент и выбирать инсайд
-        calculatorVolume.segmentEditorNode.SetMaskMode(vtkMRMLSegmentationNode.EditAllowedOutsideAllSegments)
-
-        segmentEditorWidget.setActiveEffectByName("Selecting Closed Surface")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("MinimumThreshold", sourceVolumeMin)
-        effect.setParameter("MaximumThreshold", calculatorVolume.maximumThreshold + calculatorVolume.offsetThreshold)
-        effect.setParameter("SegmentationAlgorithm", "GrowCut")
-        effect.setParameter("MinimumDiameterMm", self.minimumDiameter)
-        effect.self().apply(ijkPoints)
-
-        calculatorVolume.segmentEditorNode.SetMaskMode(vtkMRMLSegmentationNode.EditAllowedEverywhere)
-        segmentation.RemoveSegment(maskSegmentID)
-
-        segmentEditorWidget.setActiveEffectByName("Islands")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("Operation", SegmentEditorEffects.REMOVE_SMALL_ISLANDS)
-        effect.setParameter("MinimumSize", 3000)
-        effect.self().onApply()
-
-        segmentEditorWidget.setActiveEffectByName("Smoothing")
-        effect = segmentEditorWidget.activeEffect()
-        effect.setParameter("SmoothingMethod", SegmentEditorEffects.MORPHOLOGICAL_CLOSING)
-        effect.setParameter("KernelSizeMm", self.closingSmoothingSize)
-        effect.self().onApply()
+        self.pipeline.run(calculatorVolume, ijkPoints)

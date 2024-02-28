@@ -1,25 +1,21 @@
 import slicer
 import vtk
+import qt
 from MRMLCorePython import vtkMRMLDisplayableNode
 
 from .CalculatorVolume import *
 from .SelectingClosedSurfaceEditorEffect import *
 from .utils import registerEditorEffect
+from .PipelineApplierLogic import UpdaterActionsOnProgressBar
 
 
 class CalculatorVolumeWidget:
     def __init__(self) -> None:
+        self.logic = None
         self.nodeAddedId = None
         self.crosshairNode = None
         self.ui = None
         self.getterSegmentName = None
-
-        # applierLogic = ApplierLogicWithManyMargins()
-        applierLogic = ApplierLogicWithMask()
-        self.logic = CalculatorVolume(
-            applierLogic,
-            SegmentEditorEffects.METHOD_TRIANGLE
-        )
 
     def setup(self, uiCalculaterVolumeCategory) -> None:
         registerEditorEffect(__file__, 'SelectingClosedSurfaceEditorEffect.py')
@@ -27,6 +23,13 @@ class CalculatorVolumeWidget:
         self.crosshairNode = slicer.util.getNode("Crosshair")
 
         self.ui = uiCalculaterVolumeCategory
+        self.ui.progressBarForCalculatorVolume.hide()
+
+        applierLogic = ApplierLogicWithMask(UpdaterActionsOnProgressBar(self.ui))
+        self.logic = CalculatorVolume(
+            applierLogic,
+            SegmentEditorEffects.METHOD_TRIANGLE
+        )
 
         self.ui.volumeNodeForCalculateVolume.connect(
             "currentNodeChanged(vtkMRMLNode*)", self.onVolumeChanged
@@ -39,6 +42,7 @@ class CalculatorVolumeWidget:
         self.ui.isPreviewCheckBox.connect("clicked(bool)", lambda value: self.logic.setIsPreviewState(value))
 
         self.ui.autothresholdMethod.addItem("Triangle", SegmentEditorEffects.METHOD_TRIANGLE)
+        # TODO: Failed to compute threshold value using method KittlerIllingworth
         self.ui.autothresholdMethod.addItem("Kittler Illingworth", SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH)
         self.ui.autothresholdMethod.addItem("Otsu", SegmentEditorEffects.METHOD_OTSU)
         self.ui.autothresholdMethod.connect("currentIndexChanged(int)", self.onAutoThresholdChanged)
@@ -86,39 +90,29 @@ class CalculatorVolumeWidget:
 
     @vtk.calldata_type(vtk.VTK_OBJECT)
     def onNodeAddedOnScene(self, caller, eventId, callData):
-        if callData.IsA("vtkMRMLScalarVolumeNode"):
-            sliceViewer = slicer.mrmlScene.GetNthNodeByClass(0, "vtkMRMLSliceCompositeNode")
-            if callData.GetID() == sliceViewer.GetBackgroundVolumeID():
-                self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(callData.GetID())
+        if not callData.IsA("vtkMRMLScalarVolumeNode"):
+            return
+
+        # I would like to change only when the background change from there,
+        # but slicer.mrmlScene.GetNthNodeByClass(i, "vtkMRMLSliceCompositeNode").GetBackgroundVolumeID()
+        # still hasn't changed in this event.
+        self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(callData.GetID())
 
     def onVolumeChanged(self):
         volumeNode = self.ui.volumeNodeForCalculateVolume.currentNode()
-        self.logic.setVolumeNode(volumeNode)
+        if self.logic.volumeNode != volumeNode:
+            self.logic.setVolumeNode(volumeNode)
         self.showOnlyCurrentVolume()
-        if volumeNode is None:
-            return
-
-        segmentationNode = self.logic.segmentationNode
-        if segmentationNode is None:
-            return
-
-        segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)
 
     def onSegmentationChanged(self):
         segmentationNode: vtkMRMLSegmentationNode = self.ui.segmentationNodeForCalculateVolume.currentNode()
+
         self.logic.setSegmentationNode(segmentationNode)
         self.showOnlyCurrentSegmentation()
-
-        if segmentationNode is None:
-            return
-
-        volumeNodeRefWithSegmentationNode = segmentationNode.GetNodeReference(
-            segmentationNode.GetReferenceImageGeometryReferenceRole()
+        self.ui.segmentationShow3DButton.setSegmentationNode(segmentationNode)
+        self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(
+            None if self.logic.volumeNode is None else self.logic.volumeNode.GetID()
         )
-        if volumeNodeRefWithSegmentationNode is None:
-            segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(self.logic.volumeNode)
-        else:
-            self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(volumeNodeRefWithSegmentationNode.GetID())
 
     def showOnlyCurrentVolume(self):
         volumeNode = self.logic.volumeNode
@@ -150,7 +144,14 @@ class CalculatorVolumeWidget:
         tableNode: vtkMRMLTableNode = self.ui.tableNodeForCalculateVolume.currentNode()
 
         with slicer.util.tryWithErrorDisplay("Failed to save results", waitCursor=True):
+            isNeedSwitch3D = not self.ui.segmentationShow3DButton.checked
+            if isNeedSwitch3D:
+                self.ui.segmentationShow3DButton.clicked(True)
+
             self.logic.saveResultsToTable(tableNode)
+
+            if isNeedSwitch3D:
+                self.ui.segmentationShow3DButton.clicked(False)
 
             slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpTableView)
             slicer.app.applicationLogic().GetSelectionNode().SetReferenceActiveTableID(tableNode.GetID())
