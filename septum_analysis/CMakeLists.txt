@@ -7,7 +7,8 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}Lib/__init__.py
   ${MODULE_NAME}Lib/CalculatorVolume.py
   ${MODULE_NAME}Lib/CalculatorVolumeWidget.py
-  ${MODULE_NAME}Lib/SmartLocalThresholdEditorEffect.py
+  ${MODULE_NAME}Lib/SelectingClosedSurfaceEditorEffect.py
+  ${MODULE_NAME}Lib/utils.py
   )
 
 set(MODULE_PYTHON_RESOURCES

@@ -1,4 +1,4 @@
 from .CalculatorVolume import *
 from .CalculatorVolumeWidget import *
-from .SmartLocalThresholdEditorEffect import *
-
+from .SelectingClosedSurfaceEditorEffect import *
+from .utils import *

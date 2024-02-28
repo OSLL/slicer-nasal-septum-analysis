@@ -23,6 +23,27 @@
       <item>
        <layout class="QHBoxLayout" name="selectorsNodeForCalculateVolumeCategory">
         <item>
+         <widget class="qMRMLNodeComboBox" name="segmentationNodeForCalculateVolume">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLSegmentationNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="noneEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="renameEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="qMRMLNodeComboBox" name="volumeNodeForCalculateVolume">
           <property name="toolTip">
            <string>Volume to calculate volume</string>
@@ -46,27 +67,6 @@
           </property>
           <property name="removeEnabled">
            <bool>false</bool>
-          </property>
-          <property name="interactionNodeSingletonTag">
-           <string notr="true"/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="qMRMLNodeComboBox" name="segmentationNodeForCalculateVolume">
-          <property name="nodeTypes">
-           <stringlist notr="true">
-            <string>vtkMRMLSegmentationNode</string>
-           </stringlist>
-          </property>
-          <property name="hideChildNodeTypes">
-           <stringlist notr="true"/>
-          </property>
-          <property name="noneEnabled">
-           <bool>true</bool>
-          </property>
-          <property name="renameEnabled">
-           <bool>true</bool>
           </property>
           <property name="interactionNodeSingletonTag">
            <string notr="true"/>
@@ -134,33 +134,6 @@
            <string>Right Sinus</string>
           </property>
          </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="customNameLayout">
-          <item>
-           <widget class="QRadioButton" name="customNameSegmentButtonForCalculateVolume">
-            <property name="text">
-             <string>Custom</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="customNameSegmentForCalculateVolume">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="accessibleName">
-             <string/>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="placeholderText">
-             <string>Enter other name</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </item>
        </layout>
       </item>

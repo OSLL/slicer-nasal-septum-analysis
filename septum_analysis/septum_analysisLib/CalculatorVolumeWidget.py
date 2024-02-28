@@ -3,44 +3,26 @@ import vtk
 from MRMLCorePython import vtkMRMLDisplayableNode
 
 from .CalculatorVolume import *
+from .SelectingClosedSurfaceEditorEffect import *
+from .utils import registerEditorEffect
 
 
 class CalculatorVolumeWidget:
-    DEFAULT_MARGIN_SIZE_IN_MM = 1.0
-    DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION = 3.5
-
     def __init__(self) -> None:
         self.nodeAddedId = None
-        self.sliceWidget = None
-        self.interactor = None
         self.crosshairNode = None
         self.ui = None
         self.getterSegmentName = None
+
+        # applierLogic = ApplierLogicWithManyMargins()
+        applierLogic = ApplierLogicWithMask()
         self.logic = CalculatorVolume(
-            self.DEFAULT_MARGIN_SIZE_IN_MM,
-            self.DEFAULT_MINIMUM_DIAMETER_FOR_SEGMENTATION,
+            applierLogic,
             SegmentEditorEffects.METHOD_TRIANGLE
         )
 
     def setup(self, uiCalculaterVolumeCategory) -> None:
-        def registerEditorEffect():
-            import os
-            import qt
-            import slicer.ScriptedLoadableModule
-
-            import qSlicerSegmentationsEditorEffectsPythonQt as qSlicerSegmentationsEditorEffects
-            instance = qSlicerSegmentationsEditorEffects.qSlicerSegmentEditorScriptedEffect(None)
-            effectFilename = os.path.join(os.path.dirname(__file__),
-                                          'SmartLocalThresholdEditorEffect.py')
-            instance.setPythonSource(effectFilename.replace('\\', '/'))
-            instance.self().register()
-
-        registerEditorEffect()
-
-        layoutManager = slicer.app.layoutManager()
-        self.sliceWidget = layoutManager.sliceWidget("Red")
-        sliceView = self.sliceWidget.sliceView()
-        self.interactor = sliceView.interactorStyle().GetInteractor()
+        registerEditorEffect(__file__, 'SelectingClosedSurfaceEditorEffect.py')
 
         self.crosshairNode = slicer.util.getNode("Crosshair")
 
@@ -70,9 +52,6 @@ class CalculatorVolumeWidget:
         self.ui.rightSinusButton.connect(
             'clicked(bool)', lambda: self.setGetterSegmentName(ConstGetterNameSegment(self.ui.rightSinusButton.text))
         )
-        self.ui.customNameSegmentButtonForCalculateVolume.connect(
-            'clicked(bool)', lambda: self.setGetterSegmentName(CustomGetterNameSegment(self.ui))
-        )
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
         self.enter()
@@ -90,7 +69,6 @@ class CalculatorVolumeWidget:
     def exit(self) -> None:
         slicer.mrmlScene.RemoveObserver(self.nodeAddedId)
         self.nodeAddedId = None
-        self.logic.turnOffTool()
         self.logic.exit()
 
     def setGetterSegmentName(self, getterSegmentName):
@@ -113,7 +91,6 @@ class CalculatorVolumeWidget:
             if callData.GetID() == sliceViewer.GetBackgroundVolumeID():
                 self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(callData.GetID())
 
-    # TODO: нужно у самой сегментации менять вольюм -- погуглить
     def onVolumeChanged(self):
         volumeNode = self.ui.volumeNodeForCalculateVolume.currentNode()
         self.logic.setVolumeNode(volumeNode)
@@ -135,7 +112,13 @@ class CalculatorVolumeWidget:
         if segmentationNode is None:
             return
 
-        segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(self.logic.volumeNode)
+        volumeNodeRefWithSegmentationNode = segmentationNode.GetNodeReference(
+            segmentationNode.GetReferenceImageGeometryReferenceRole()
+        )
+        if volumeNodeRefWithSegmentationNode is None:
+            segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(self.logic.volumeNode)
+        else:
+            self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(volumeNodeRefWithSegmentationNode.GetID())
 
     def showOnlyCurrentVolume(self):
         volumeNode = self.logic.volumeNode
@@ -186,17 +169,3 @@ class ConstGetterNameSegment:
 
     def disable(self) -> None:
         pass
-
-
-class CustomGetterNameSegment:
-    def __init__(self, ui) -> None:
-        self.ui = ui
-
-    def get(self) -> str:
-        return self.ui.customNameSegmentForCalculateVolume.text
-
-    def enable(self) -> None:
-        self.ui.customNameSegmentForCalculateVolume.setEnabled(True)
-
-    def disable(self) -> None:
-        self.ui.customNameSegmentForCalculateVolume.setEnabled(False)

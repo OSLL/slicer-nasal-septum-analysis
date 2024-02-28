@@ -168,7 +168,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     def onReload(self):
         packageName = self.moduleName + 'Lib'
         logging.debug("Reloading " + packageName)
-        submoduleNames = ['CalculatorVolume', 'CalculatorVolumeWidget', 'SmartLocalThresholdEditorEffect']
+        submoduleNames = ['CalculatorVolume', 'CalculatorVolumeWidget', 'SelectingClosedSurfaceEditorEffect', 'utils']
         import imp
         f, filename, description = imp.find_module(packageName)
         package = imp.load_module(packageName, f, filename, description)

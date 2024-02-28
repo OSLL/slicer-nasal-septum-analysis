@@ -32,12 +32,11 @@ import SegmentEditorEffects
 
 
 class CalculatorVolume:
-    def __init__(self, marginSizeInMm: float, minimumDiameterForSegmentation: float, defaultAutothresholdMethod):
+    def __init__(self, applierLogic, defaultAutothresholdMethod):
         self.isPreviewState = True
         self.segmentEditorWidget = None
         self.segmentEditorNode = None
-        self.marginSizeInMm = marginSizeInMm
-        self.minimumDiameterForSegmentation = minimumDiameterForSegmentation
+        self.applierLogic = applierLogic
         self.offsetThreshold = 0.0
         self.maximumThreshold = 0.0
         self.autoThresholdMethod = defaultAutothresholdMethod
@@ -51,9 +50,10 @@ class CalculatorVolume:
         self.segmentEditorNode: vtkMRMLSegmentEditorNode = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLSegmentEditorNode"
         )
+        self.tryChangeStateTool()
 
     def exit(self):
-        self.turnOffTool()
+        self.turnOffEffect()
         slicer.mrmlScene.RemoveNode(self.segmentEditorNode)
         self.segmentEditorNode = None
         self.segmentEditorWidget = None
@@ -75,85 +75,101 @@ class CalculatorVolume:
             effect.self().autoThreshold(self.autoThresholdMethod, SegmentEditorEffects.MODE_SET_MIN_UPPER)
             self.maximumThreshold = effect.doubleParameter("MaximumThreshold")
             effect.setParameter("MaximumThreshold", self.maximumThreshold + self.offsetThreshold)
-            effect.setParameter("SegmentationAlgorithm", "GrowCut")
-            effect.setParameter("MinimumDiameterMm", self.minimumDiameterForSegmentation)
 
     def setSegmentName(self, segmentName: str):
-        self.segmentName = segmentName
-        self.tryChangeStateTool()
+        # TODO: не нашёл способа как взять имя поля
+        self.changeParameter('segmentName', segmentName, self.updateSegment)
 
     def setVolumeNode(self, volumeNode: vtkMRMLScalarVolumeNode) -> None:
-        self.volumeNode = volumeNode
-        self.tryChangeStateTool()
+        self.changeParameter('volumeNode', volumeNode,
+                             lambda: self.segmentEditorWidget.setSourceVolumeNode(self.volumeNode))
 
+    # TODO: Failed to compute threshold value using method KittlerIllingworth
     def setSegmentationNode(self, segmentationNode: vtkMRMLSegmentationNode) -> None:
-        self.segmentationNode = segmentationNode
-        self.tryChangeStateTool()
+        def onUpdateSegmentationNode():
+            volumeNodeRefWithSegmentationNode = segmentationNode.GetNodeReference(
+                segmentationNode.GetReferenceImageGeometryReferenceRole()
+            )
+            if volumeNodeRefWithSegmentationNode != self.volumeNode:
+                self.updateEffect()
+
+            self.updateSegment()
+
+        self.changeParameter('segmentationNode', segmentationNode, onUpdateSegmentationNode)
+
+    def changeParameter(self, attributeName, value, callbackChangeFromTrueToTrueStateEffect) -> None:
+        oldStateEffect = self.isActiveEffect()
+        setattr(self, attributeName, value)
+        newStateEffect = self.isActiveEffect()
+
+        if oldStateEffect:
+            if newStateEffect:
+                callbackChangeFromTrueToTrueStateEffect()
+            else:
+                self.turnOffEffect()
+        elif newStateEffect:
+            self.activateEffect()
 
     def tryChangeStateTool(self):
         if not self.isActiveEffect():
-            self.turnOffTool()
+            self.turnOffEffect()
             return
 
+        self.activateEffect()
+
+    def activateEffect(self):
         self.segmentEditorWidget.setMRMLSegmentEditorNode(self.segmentEditorNode)
         self.segmentEditorWidget.setSegmentationNode(self.segmentationNode)
         self.segmentEditorWidget.setSourceVolumeNode(self.volumeNode)
-        segmentation: vtkSegmentation = self.segmentationNode.GetSegmentation()
-        currentSegmentID = segmentation.GetSegmentIdBySegmentName(self.segmentName)
-        if currentSegmentID == "" or currentSegmentID is None:
-            currentSegmentID = segmentation.AddEmptySegment(self.segmentName, self.segmentName)
-        self.segmentEditorNode.SetSelectedSegmentID(currentSegmentID)
 
-        self.segmentEditorWidget.setActiveEffectByName("Smart Local Threshold")
+        self.segmentEditorWidget.setActiveEffectByName("Selecting Closed Surface")
         effect = self.segmentEditorWidget.activeEffect()
-        effect.self().autoThreshold(self.autoThresholdMethod, SegmentEditorEffects.MODE_SET_MIN_UPPER)
-        self.maximumThreshold = effect.doubleParameter("MaximumThreshold")
-        effect.setParameter("MaximumThreshold", self.maximumThreshold + self.offsetThreshold)
         effect.setParameter("SegmentationAlgorithm", "GrowCut")
 
+        self.updateEffect()
+        self.updateSegment()
+
         def applyTool(ijkPoints):
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.self().apply(ijkPoints)
+            # TODO: разобраться почему я не могу делать по-другому, и если уверен, что не могу по-другому,
+            #  то нужно цвет копировать хотя бы
+            currentSegmentID = self.segmentEditorNode.GetSelectedSegmentID()
 
-            self.segmentEditorWidget.setActiveEffectByName("Margin")
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.setParameter("MarginSizeMm", -self.marginSizeInMm)
-            effect.self().onApply()
+            segmentation: vtkSegmentation = self.segmentationNode.GetSegmentation()
+            segmentation.RemoveSegment(currentSegmentID)
+            segmentation.AddEmptySegment(currentSegmentID)
+            self.segmentEditorNode.SetSelectedSegmentID(currentSegmentID)
 
-            self.segmentEditorWidget.setActiveEffectByName("Smoothing")
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.setParameter("SmoothingMethod", SegmentEditorEffects.MORPHOLOGICAL_OPENING)
-            effect.self().onApply()
-
-            self.segmentEditorWidget.setActiveEffectByName("Islands")
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.setParameter("Operation", SegmentEditorEffects.REMOVE_SMALL_ISLANDS)
-            effect.setParameter("MinimumSize", 3000)
-            effect.self().onApply()
-
-            self.segmentEditorWidget.setActiveEffectByName("Margin")
-            effect = self.segmentEditorWidget.activeEffect()
-            effect.setParameter("MarginSizeMm", self.marginSizeInMm)
-            effect.self().onApply()
+            self.applierLogic.apply(self, ijkPoints)
 
             self.segmentationNode.CreateClosedSurfaceRepresentation()
             self.tryChangeStateTool()
 
         effect.self().setApplyLogic(applyTool)
 
-    def isActiveEffect(self):
-        return self.isPreviewState and self.volumeNode is not None and self.segmentationNode is not None and self.segmentName is not None and self.segmentName != ""
+    def updateEffect(self):
+        effect = self.segmentEditorWidget.activeEffect()
+        effect.self().autoThreshold(self.autoThresholdMethod, SegmentEditorEffects.MODE_SET_MIN_UPPER)
+        self.maximumThreshold = effect.doubleParameter("MaximumThreshold")
+        effect.setParameter("MaximumThreshold", self.maximumThreshold + self.offsetThreshold)
 
-    def turnOffTool(self):
+    def updateSegment(self):
+        segmentation: vtkSegmentation = self.segmentationNode.GetSegmentation()
+        currentSegmentID = segmentation.GetSegmentIdBySegmentName(self.segmentName)
+        if currentSegmentID == "" or currentSegmentID is None:
+            currentSegmentID = segmentation.AddEmptySegment(self.segmentName, self.segmentName)
+        self.segmentEditorNode.SetSelectedSegmentID(currentSegmentID)
+
+    def isActiveEffect(self):
+        return self.isPreviewState and self.volumeNode is not None and self.segmentationNode is not None \
+            and self.segmentName is not None and self.segmentName != ""
+
+    def turnOffEffect(self):
         if self.segmentEditorWidget is None:
             return
         self.segmentEditorWidget.setActiveEffectByName(None)
         self.segmentEditorWidget.setMRMLSegmentEditorNode(None)
         self.segmentEditorWidget.setSegmentationNode(None)
         self.segmentEditorWidget.setSourceVolumeNode(None)
-
-    def setMarginSize(self, sizeInMm: float) -> None:
-        self.marginSizeInMm = sizeInMm
 
     def saveResultsToTable(self, tableNode: vtkMRMLTableNode):
         if self.segmentationNode is None:
