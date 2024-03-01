@@ -12,6 +12,15 @@ from slicer.parameterNodeWrapper import (
     WithinRange,
 )
 
+from slicer.util import pip_install
+
+pip_install('opencv-python')
+pip_install('numpy')
+import cv2
+import numpy as np
+
+# from septum_detector import *
+
 from slicer import vtkMRMLScalarVolumeNode
 
 
@@ -23,7 +32,7 @@ class septum_analysis(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
-        self.parent.categories = ["septum_analysis"] 
+        self.parent.categories = ["septum_analysis"]
         self.parent.dependencies = []
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
@@ -156,6 +165,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.downloadModelButton.connect('clicked(bool)', self.onDownloadModelButton)
         # TODO: add process for self.ui.FileButton.
         self.ui.ProcessButton.connect('clicked(bool)', self.onProcessButton)
+        self.ui.DrawButton.connect('clicked(bool)', self.onDrawButton)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -243,7 +253,6 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Run processing when user clicks "Apply" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
-
             # Compute output
             self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
                                self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
@@ -252,20 +261,21 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             if self.ui.invertedOutputSelector.currentNode():
                 # If additional output volume is selected then result with inverted threshold is written there
                 self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
-                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
+                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked,
+                                   showResult=False)
 
-    
     '''
     Downloads models if it was not already downloaded.
     Returns true if successful.
     '''
+
     def downloadModels(self) -> bool:
         import requests
 
         MODELS_LINK = 'https://github.com/lucanchling/AMASSS_CBCT/releases/download/v1.0.2/AMASSS_Models.zip'
         FILE_NAME = 'AMASSS_Models.zip'
         FOLDER_PATH = 'AMASSS_Models'
-        
+
         modelsPath = os.path.join(os.path.dirname(__file__), 'Resources', FILE_NAME)
         modelsFolderPath = os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH)
 
@@ -278,7 +288,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             progress = slicer.util.createProgressDialog(value=0, maximum=total_length)
 
             downloaded = 0
-            for data in response.iter_content(chunk_size=1024*1024):
+            for data in response.iter_content(chunk_size=1024 * 1024):
                 downloaded += len(data)
                 modelsFile.write(data)
                 if progress.wasCanceled:
@@ -298,7 +308,6 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             self.ui.downloadModelButton.enabled = not self.downloadModels()
             if not self.ui.downloadModelButton.enabled:
                 self.ui.downloadModelButton.text = "Model downloaded!"
-               
 
     def onProcessButton(self) -> None:
         inputVolume = str(self.ui.FileButton.currentPath)
@@ -309,7 +318,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         outputDirecotryObject = tempfile.TemporaryDirectory()
         outputDirectory = outputDirecotryObject.name
-        
+
         temporaryDirectoryObject = tempfile.TemporaryDirectory()
         temporatyDirectory = temporaryDirectoryObject.name
 
@@ -342,6 +351,45 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         outputDirecotryObject.cleanup()
         temporaryDirectoryObject.cleanup()
+
+    def onDrawButton(self) -> None:
+        plane1 = vtk.vtkPlaneSource()
+        plane2 = vtk.vtkPlaneSource()
+
+        min_coord = -100
+        max_coord = 100
+
+        images = [cv2.imread(
+            os.path.join('/home/andreiegorych/study/slicer-nasal-septum-analysis/notebooks/output/slices',
+                         f"slice_{i}.png"),
+            cv2.IMREAD_GRAYSCALE)
+            for i in range(0, 240)]
+
+        # print(images[0])
+
+        low, high = self.logic.find_nose(images)
+
+        print(low, high)
+
+        low = (low / 240) * 200 - 100
+        high = (high / 240) * 200 - 100
+
+        plane1.SetOrigin(max_coord, max_coord, low)
+        plane1.SetPoint1(min_coord, max_coord, low)
+        plane1.SetPoint2(max_coord, min_coord, low)
+
+        plane2.SetOrigin(max_coord, max_coord, high)
+        plane2.SetPoint1(min_coord, max_coord, high)
+        plane2.SetPoint2(max_coord, min_coord, high)
+
+        boxNode = slicer.modules.models.logic().AddModel(plane1.GetOutputPort())
+        boxNode.GetDisplayNode().SetColor(1, 0, 0)
+        boxNode.GetDisplayNode().SetOpacity(0.8)
+
+        boxNode = slicer.modules.models.logic().AddModel(plane2.GetOutputPort())
+        boxNode.GetDisplayNode().SetColor(0, 1, 0)
+        boxNode.GetDisplayNode().SetOpacity(0.8)
+
 
 #
 # septum_analysisLogic
@@ -396,12 +444,49 @@ class septum_analysisLogic(ScriptedLoadableModuleLogic):
             'ThresholdValue': imageThreshold,
             'ThresholdType': 'Above' if invert else 'Below'
         }
-        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True, update_display=showResult)
+        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True,
+                                 update_display=showResult)
         # We don't need the CLI module node anymore, remove it to not clutter the scene with it
         slicer.mrmlScene.RemoveNode(cliNode)
 
         stopTime = time.time()
-        logging.info(f'Processing completed in {stopTime-startTime:.2f} seconds')
+        logging.info(f'Processing completed in {stopTime - startTime:.2f} seconds')
+
+    def analyze_face_curvature(self, images: [cv2.Mat]):
+        result = []
+        result1 = []
+        for data in images:
+            try:
+                # INPUT_FILE = os.path.join(CT_SLICES_DIR, f"slice_{i}.png")
+                # data = cv2.imread(INPUT_FILE, cv2.IMREAD_GRAYSCALE)
+                data = cv2.bilateralFilter(data, 3, 75, 75)
+                _, thresh = cv2.threshold(data, data.mean(), 255, cv2.THRESH_TOZERO)
+                cont, _ = cv2.findContours(thresh, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+                maxc = max(enumerate(cont), key=lambda x: cv2.contourArea(x[1]))[0]
+                ch = cv2.convexHull(cont[maxc], returnPoints=False)
+
+                ch_ = cv2.convexHull(cont[maxc])
+                t1 = sum(map(lambda x: x[0][3], cv2.convexityDefects(cont[maxc], ch)))
+                t2 = cv2.contourArea(ch_) - cv2.contourArea(cont[maxc])
+                result.append(t1)
+                result1.append(t2)
+            except Exception as e:
+                print(e)
+                result.append(result[-1])
+                result1.append(result1[-1])
+        return result, result1
+
+    def find_nose(self, images: [cv2.Mat]):
+        result, result1 = self.analyze_face_curvature(images)
+        tr0_0 = np.quantile(result, 0.3)
+        tr0_1 = np.quantile(result, 0.7)
+        # tr1 = np.quantile(result1, 0.5)
+        m = np.argmax(result)
+        intersections1 = np.argwhere(np.diff(np.sign(result - tr0_0))).flatten()
+        intersections2 = np.argwhere(np.diff(np.sign(result - tr0_1))).flatten()
+        place1 = np.searchsorted(intersections1, m)
+        place2 = np.searchsorted(intersections2, m)
+        return intersections1[place1 - 1], intersections2[place2]
 
 
 #

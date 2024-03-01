@@ -36,6 +36,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="DrawButton">
+     <property name="text">
+      <string>Draw</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="applyButton">
      <property name="enabled">
       <bool>false</bool>
