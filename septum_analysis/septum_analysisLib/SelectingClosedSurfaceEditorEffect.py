@@ -106,6 +106,10 @@ class ApplierLogicWithMask:
             'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
             'KernelSizeMm': lambda _: self.closingSmoothingSizeForEnd,
         }))
+        self.pipeline.addAction(EditorEffectAction('Smoothing', {
+            'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
+            'KernelSizeMm': lambda _: self.closingSmoothingSizeForEnd,
+        }))
 
     def apply(self, calculatorVolume: CalculatorVolume, ijkPoints):
         self.pipeline.run(calculatorVolume, ijkPoints)

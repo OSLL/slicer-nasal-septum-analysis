@@ -43,6 +43,8 @@ class CalculatorVolumeWidget:
 
         self.ui.autothresholdMethod.addItem("Triangle", SegmentEditorEffects.METHOD_TRIANGLE)
         # TODO: Failed to compute threshold value using method KittlerIllingworth
+        #  This also happens in SegmentEditor, which means maybe either remove this comment,
+        #  or show that the algorithm failed (although there is no point in this).
         self.ui.autothresholdMethod.addItem("Kittler Illingworth", SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH)
         self.ui.autothresholdMethod.addItem("Otsu", SegmentEditorEffects.METHOD_OTSU)
         self.ui.autothresholdMethod.connect("currentIndexChanged(int)", self.onAutoThresholdChanged)
@@ -58,7 +60,6 @@ class CalculatorVolumeWidget:
         )
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
-        self.enter()
 
     def cleanup(self):
         self.exit()
@@ -120,6 +121,7 @@ class CalculatorVolumeWidget:
 
         self.resetFovOnAllSlices()
 
+    # TODO: Ideally reset the size to the middle, but not the scale
     @staticmethod
     def resetFovOnAllSlices():
         sliceWidgetNames = slicer.app.layoutManager().sliceViewNames()

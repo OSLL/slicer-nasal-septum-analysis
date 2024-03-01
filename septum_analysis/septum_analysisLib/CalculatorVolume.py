@@ -172,8 +172,8 @@ class CalculatorVolume:
         effect.setParameter("MaximumThreshold", self.maximumThreshold + self.offsetThreshold)
 
     def isActiveEffect(self):
-        return self.isPreviewState and self.volumeNode is not None and self.segmentationNode is not None \
-            and self.segmentName is not None and self.segmentName != ""
+        return self.segmentEditorWidget is not None and self.isPreviewState and self.volumeNode is not None \
+            and self.segmentationNode is not None and self.segmentName is not None and self.segmentName != ""
 
     def turnOffEffect(self):
         if self.segmentEditorWidget is None:

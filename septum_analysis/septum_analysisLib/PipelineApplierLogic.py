@@ -37,6 +37,8 @@ class EditorEffectAction:
         self.applyAction(data, effect)
         data.segmentEditorWidget.setActiveEffectByName(None)
 
+# TODO: Maby in a separate thread, but I don’t think so. that the UI will then be updated
+#  (or make a progress bar in a new window)
 class UpdaterActionsOnProgressBar:
     def __init__(self, uiContainer):
         self.progressBar: qt.QProgressBar = uiContainer.progressBarForCalculatorVolume
