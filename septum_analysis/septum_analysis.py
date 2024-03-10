@@ -24,7 +24,7 @@ class septum_analysis(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
-        self.parent.categories = ["septum_analysis"]
+        self.parent.categories = ["septum_analysis"] 
         self.parent.dependencies = []
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
@@ -270,6 +270,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Run processing when user clicks "Apply" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
+
             # Compute output
             self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
                                self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
@@ -278,21 +279,20 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             if self.ui.invertedOutputSelector.currentNode():
                 # If additional output volume is selected then result with inverted threshold is written there
                 self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
-                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked,
-                                   showResult=False)
+                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
 
+    
     '''
     Downloads models if it was not already downloaded.
     Returns true if successful.
     '''
-
     def downloadModels(self) -> bool:
         import requests
 
         MODELS_LINK = 'https://github.com/lucanchling/AMASSS_CBCT/releases/download/v1.0.2/AMASSS_Models.zip'
         FILE_NAME = 'AMASSS_Models.zip'
         FOLDER_PATH = 'AMASSS_Models'
-
+        
         modelsPath = os.path.join(os.path.dirname(__file__), 'Resources', FILE_NAME)
         modelsFolderPath = os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH)
 
@@ -305,7 +305,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             progress = slicer.util.createProgressDialog(value=0, maximum=total_length)
 
             downloaded = 0
-            for data in response.iter_content(chunk_size=1024 * 1024):
+            for data in response.iter_content(chunk_size=1024*1024):
                 downloaded += len(data)
                 modelsFile.write(data)
                 if progress.wasCanceled:
@@ -325,6 +325,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             self.ui.downloadModelButton.enabled = not self.downloadModels()
             if not self.ui.downloadModelButton.enabled:
                 self.ui.downloadModelButton.text = "Model downloaded!"
+               
 
     def onProcessButton(self) -> None:
         inputVolume = str(self.ui.FileButton.currentPath)
@@ -335,7 +336,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         outputDirecotryObject = tempfile.TemporaryDirectory()
         outputDirectory = outputDirecotryObject.name
-
+        
         temporaryDirectoryObject = tempfile.TemporaryDirectory()
         temporatyDirectory = temporaryDirectoryObject.name
 
@@ -368,7 +369,6 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         outputDirecotryObject.cleanup()
         temporaryDirectoryObject.cleanup()
-
 
 #
 # septum_analysisLogic
@@ -423,13 +423,12 @@ class septum_analysisLogic(ScriptedLoadableModuleLogic):
             'ThresholdValue': imageThreshold,
             'ThresholdType': 'Above' if invert else 'Below'
         }
-        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True,
-                                 update_display=showResult)
+        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True, update_display=showResult)
         # We don't need the CLI module node anymore, remove it to not clutter the scene with it
         slicer.mrmlScene.RemoveNode(cliNode)
 
         stopTime = time.time()
-        logging.info(f'Processing completed in {stopTime - startTime:.2f} seconds')
+        logging.info(f'Processing completed in {stopTime-startTime:.2f} seconds')
 
 
 #
