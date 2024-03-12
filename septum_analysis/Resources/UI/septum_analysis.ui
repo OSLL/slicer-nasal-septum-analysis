@@ -36,9 +36,9 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="DrawButton">
+    <widget class="QPushButton" name="FindNoseButton">
      <property name="text">
-      <string>Draw</string>
+      <string>Find nose</string>
      </property>
     </widget>
    </item>
