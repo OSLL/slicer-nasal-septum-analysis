@@ -3,6 +3,7 @@ from .CalculatorVolume import *
 from .PipelineApplierLogic import *
 
 
+# Unfortunately, there is no unregistration function, so this effect can be seen in SegmentEditor
 class SelectingClosedSurfaceEditorEffect(SegmentEditorEffect):
     def __init__(self, scriptedEffect):
         SegmentEditorThresholdEffect.__init__(self, scriptedEffect)
@@ -101,10 +102,6 @@ class ApplierLogicWithMask:
         self.pipeline.addAction(EditorEffectAction('Islands', {
             'Operation': lambda _: SegmentEditorEffects.REMOVE_SMALL_ISLANDS,
             'MinimumSize': lambda _: 3000,
-        }))
-        self.pipeline.addAction(EditorEffectAction('Smoothing', {
-            'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
-            'KernelSizeMm': lambda _: self.closingSmoothingSizeForEnd,
         }))
         self.pipeline.addAction(EditorEffectAction('Smoothing', {
             'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,

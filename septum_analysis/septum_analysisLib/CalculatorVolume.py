@@ -80,9 +80,9 @@ class CalculatorVolume:
         self.volumeNode = volumeNode
         if self.segmentationNode is not None:
             self.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)
+
+        # I do this in order to completely refresh the entire view, since I’m not sure that it will work otherwise
         self.turnOffEffect()
-        # TODO: you need to think about how to make it more optimized without bugs.
-        #  Also, this doesn’t always work either.
         self.tryChangeStateTool()
 
     def setSegmentationNode(self, segmentationNode: vtkMRMLSegmentationNode) -> None:
@@ -97,9 +97,8 @@ class CalculatorVolume:
             else:
                 self.volumeNode = volumeNodeRefWithSegmentationNode
 
+        # I do this in order to completely refresh the entire view, since I’m not sure that it will work otherwise
         self.turnOffEffect()
-        # TODO: you need to think about how to make it more optimized without bugs
-        #  Also, this doesn’t always work either.
         self.tryChangeStateTool()
 
     def changeParameter(self, attributeName, value, callbackChangeFromTrueToTrueStateEffect) -> None:
@@ -150,7 +149,7 @@ class CalculatorVolume:
         effect.self().setApplyLogic(applyTool)
 
     def setCustomEditorEffect(self):
-        self.segmentEditorWidget.setActiveEffectByName("Selecting Closed Surface")
+        self.segmentEditorWidget.setActiveEffectByName('Selecting Closed Surface')
 
     def updateSegment(self):
         segmentation: vtkSegmentation = self.segmentationNode.GetSegmentation()

@@ -11,6 +11,7 @@ from .PipelineApplierLogic import UpdaterActionsOnProgressBar
 
 class CalculatorVolumeWidget:
     def __init__(self) -> None:
+        self.isEntered = False
         self.logic = None
         self.nodeAddedId = None
         self.crosshairNode = None
@@ -42,9 +43,6 @@ class CalculatorVolumeWidget:
         self.ui.isPreviewCheckBox.connect("clicked(bool)", lambda value: self.logic.setIsPreviewState(value))
 
         self.ui.autothresholdMethod.addItem("Triangle", SegmentEditorEffects.METHOD_TRIANGLE)
-        # TODO: Failed to compute threshold value using method KittlerIllingworth
-        #  This also happens in SegmentEditor, which means maybe either remove this comment,
-        #  or show that the algorithm failed (although there is no point in this).
         self.ui.autothresholdMethod.addItem("Kittler Illingworth", SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH)
         self.ui.autothresholdMethod.addItem("Otsu", SegmentEditorEffects.METHOD_OTSU)
         self.ui.autothresholdMethod.connect("currentIndexChanged(int)", self.onAutoThresholdChanged)
@@ -61,10 +59,16 @@ class CalculatorVolumeWidget:
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
 
+        self.enter()
+
     def cleanup(self):
         self.exit()
 
     def enter(self) -> None:
+        if self.isEntered:
+            return
+        self.isEntered = True
+
         self.nodeAddedId = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAddedOnScene)
 
         self.showOnlyCurrentVolume()
@@ -72,6 +76,7 @@ class CalculatorVolumeWidget:
         self.logic.enter()
 
     def exit(self) -> None:
+        self.isEntered = False
         slicer.mrmlScene.RemoveObserver(self.nodeAddedId)
         self.nodeAddedId = None
         self.logic.exit()
@@ -121,7 +126,6 @@ class CalculatorVolumeWidget:
 
         self.resetFovOnAllSlices()
 
-    # TODO: Ideally reset the size to the middle, but not the scale
     @staticmethod
     def resetFovOnAllSlices():
         sliceWidgetNames = slicer.app.layoutManager().sliceViewNames()

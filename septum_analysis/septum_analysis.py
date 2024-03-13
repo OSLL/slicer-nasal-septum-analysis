@@ -25,7 +25,7 @@ class septum_analysis(ScriptedLoadableModule):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
         self.parent.categories = ["septum_analysis"] 
-        self.parent.dependencies = []
+        self.parent.dependencies = ["SegmentEditorLocalThreshold"]
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
         self.parent.acknowledgementText = "OSLL"
@@ -165,15 +165,15 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
 
+    # You need to click the Reload button twice to update the submodules
     def onReload(self):
-        packageName = self.moduleName + 'Lib'
-        logging.debug("Reloading " + packageName)
-        submoduleNames = [
-            'CalculatorVolume', 'CalculatorVolumeWidget',
-            'SelectingClosedSurfaceEditorEffect', 'PipelineApplierLogic',
-            'utils'
-        ]
         import imp
+        import septum_analysisLib as Lib
+        import glob
+
+        packageName = self.moduleName + 'Lib'
+        libPath = os.path.join(os.path.dirname(__file__), Lib.__name__)
+        submoduleNames = [os.path.basename(src_file)[:-3] for src_file in glob.glob(os.path.join(libPath, '*.py'))]
         f, filename, description = imp.find_module(packageName)
         package = imp.load_module(packageName, f, filename, description)
         for submoduleName in submoduleNames:

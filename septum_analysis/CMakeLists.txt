@@ -1,6 +1,8 @@
 #-----------------------------------------------------------------------------
 set(MODULE_NAME septum_analysis)
 
+set(EXTENSION_DEPENDS "SegmentEditorLocalThreshold")
+
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
