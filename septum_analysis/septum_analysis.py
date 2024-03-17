@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 import vtk
 
 import slicer
+from septum_analysisLib import *
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from slicer.parameterNodeWrapper import (
@@ -42,8 +43,8 @@ class septum_analysis(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = "septum_analysis"
-        self.parent.categories = ["septum_analysis"]
-        self.parent.dependencies = []
+        self.parent.categories = ["septum_analysis"] 
+        self.parent.dependencies = ["SegmentEditorLocalThreshold"]
         self.parent.contributors = ["Maxim Khabarov (SpbSU)", "Eugene Kalishenko (SpbSU)"]
         self.parent.helpText = """"""
         self.parent.acknowledgementText = "OSLL"
@@ -142,6 +143,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.logic = None
         self._parameterNode = None
         self._parameterNodeGuiTag = None
+        self.calculatorVolumeWidget = CalculatorVolumeWidget()
 
     def setup(self) -> None:
         """
@@ -154,6 +156,9 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         uiWidget = slicer.util.loadUI(self.resourcePath('UI/septum_analysis.ui'))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
+        self.calculatorVolumeWidget.setup(
+            slicer.util.childWidgetVariables(self.ui.calculatorVolumeCategory)
+        )
 
         # Set scene in MRML widgets. Make sure that in Qt designer the top-level qMRMLWidget's
         # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
@@ -180,11 +185,31 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
 
+    # You need to click the Reload button twice to update the submodules
+    def onReload(self):
+        import imp
+        import septum_analysisLib as Lib
+        import glob
+
+        packageName = self.moduleName + 'Lib'
+        libPath = os.path.join(os.path.dirname(__file__), Lib.__name__)
+        submoduleNames = [os.path.basename(src_file)[:-3] for src_file in glob.glob(os.path.join(libPath, '*.py'))]
+        f, filename, description = imp.find_module(packageName)
+        package = imp.load_module(packageName, f, filename, description)
+        for submoduleName in submoduleNames:
+            f, filename, description = imp.find_module(submoduleName, package.__path__)
+            try:
+                imp.load_module(packageName + '.' + submoduleName, f, filename, description)
+            finally:
+                f.close()
+        ScriptedLoadableModuleWidget.onReload(self)
+
     def cleanup(self) -> None:
         """
         Called when the application closes and the module widget is destroyed.
         """
         self.removeObservers()
+        self.calculatorVolumeWidget.cleanup()
 
     def enter(self) -> None:
         """
@@ -192,11 +217,13 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         # Make sure parameter node exists and observed
         self.initializeParameterNode()
+        self.calculatorVolumeWidget.enter()
 
     def exit(self) -> None:
         """
         Called each time the user opens a different module.
         """
+        self.calculatorVolumeWidget.exit()
         # Do not react to parameter node changes (GUI will be updated when the user enters into the module)
         if self._parameterNode:
             self._parameterNode.disconnectGui(self._parameterNodeGuiTag)
@@ -263,6 +290,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Run processing when user clicks "Apply" button.
         """
         with slicer.util.tryWithErrorDisplay("Failed to compute results.", waitCursor=True):
+
             # Compute output
             self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
                                self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
@@ -271,21 +299,20 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             if self.ui.invertedOutputSelector.currentNode():
                 # If additional output volume is selected then result with inverted threshold is written there
                 self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
-                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked,
-                                   showResult=False)
+                                   self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
 
+    
     '''
     Downloads models if it was not already downloaded.
     Returns true if successful.
     '''
-
     def downloadModels(self) -> bool:
         import requests
 
         MODELS_LINK = 'https://github.com/lucanchling/AMASSS_CBCT/releases/download/v1.0.2/AMASSS_Models.zip'
         FILE_NAME = 'AMASSS_Models.zip'
         FOLDER_PATH = 'AMASSS_Models'
-
+        
         modelsPath = os.path.join(os.path.dirname(__file__), 'Resources', FILE_NAME)
         modelsFolderPath = os.path.join(os.path.dirname(__file__), 'Resources', FOLDER_PATH)
 
@@ -298,7 +325,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             progress = slicer.util.createProgressDialog(value=0, maximum=total_length)
 
             downloaded = 0
-            for data in response.iter_content(chunk_size=1024 * 1024):
+            for data in response.iter_content(chunk_size=1024*1024):
                 downloaded += len(data)
                 modelsFile.write(data)
                 if progress.wasCanceled:
@@ -318,6 +345,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             self.ui.downloadModelButton.enabled = not self.downloadModels()
             if not self.ui.downloadModelButton.enabled:
                 self.ui.downloadModelButton.text = "Model downloaded!"
+               
 
     def onProcessButton(self) -> None:
         inputVolume = str(self.ui.FileButton.currentPath)
@@ -328,7 +356,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         outputDirecotryObject = tempfile.TemporaryDirectory()
         outputDirectory = outputDirecotryObject.name
-
+        
         temporaryDirectoryObject = tempfile.TemporaryDirectory()
         temporatyDirectory = temporaryDirectoryObject.name
 
@@ -454,13 +482,12 @@ class septum_analysisLogic(ScriptedLoadableModuleLogic):
             'ThresholdValue': imageThreshold,
             'ThresholdType': 'Above' if invert else 'Below'
         }
-        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True,
-                                 update_display=showResult)
+        cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True, update_display=showResult)
         # We don't need the CLI module node anymore, remove it to not clutter the scene with it
         slicer.mrmlScene.RemoveNode(cliNode)
 
         stopTime = time.time()
-        logging.info(f'Processing completed in {stopTime - startTime:.2f} seconds')
+        logging.info(f'Processing completed in {stopTime-startTime:.2f} seconds')
 
 
     def find_nose(self, images: [cv2.Mat]):

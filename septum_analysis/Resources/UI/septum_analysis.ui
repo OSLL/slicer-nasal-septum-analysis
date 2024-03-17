@@ -2,57 +2,299 @@
 <ui version="4.0">
  <class>septum_analysis</class>
  <widget class="qMRMLWidget" name="septum_analysis">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>316</width>
-    <height>311</height>
+    <width>375</width>
+    <height>412</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QPushButton" name="downloadModelButton">
+    <widget class="ctkCollapsibleButton" name="calculatorVolumeCategory">
      <property name="text">
-      <string>Download model</string>
+      <string>Calculator Volume</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <layout class="QHBoxLayout" name="selectorsNodeForCalculateVolumeCategory">
+        <item>
+         <widget class="qMRMLNodeComboBox" name="segmentationNodeForCalculateVolume">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLSegmentationNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="noneEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="renameEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="qMRMLNodeComboBox" name="volumeNodeForCalculateVolume">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>230</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Volume to calculate volume</string>
+          </property>
+          <property name="accessibleName">
+           <string/>
+          </property>
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLScalarVolumeNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="baseName">
+           <string/>
+          </property>
+          <property name="addEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="removeEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="thresholdOffsetField">
+        <item>
+         <widget class="QLabel" name="thresholdOffsetLabel">
+          <property name="text">
+           <string>Threshold Offset</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="qMRMLSliderWidget" name="thresholdOffset">
+          <property name="minimum">
+           <double>-150.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>150.000000000000000</double>
+          </property>
+          <property name="quantity">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="autothresholdMethod"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="qMRMLSegmentationShow3DButton" name="segmentationShow3DButton"/>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="isPreviewCheckBox">
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="text">
+           <string>IsPreview</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="midLineWidth">
+         <number>2</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="namesSegmentsForCalculateVolumeCategory" stretch="1,5">
+        <item>
+         <widget class="QRadioButton" name="leftSinusButton">
+          <property name="text">
+           <string>Left Sinus</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="rightSinusButton">
+          <property name="text">
+           <string>Right Sinus</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="midLineWidth">
+         <number>2</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="saverInTableCategory">
+        <item>
+         <widget class="qMRMLNodeComboBox" name="tableNodeForCalculateVolume">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLTableNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="editEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="renameEnabled">
+           <bool>true</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="saveInTableButton">
+          <property name="text">
+           <string>Save In Table</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarForCalculatorVolume">
+        <property name="value">
+         <number>24</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Select file  to process</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="ctkPathLineEdit" name="FileButton"/>
-   </item>
-   <item>
-    <widget class="QPushButton" name="ProcessButton">
-     <property name="text">
-      <string>Process</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="FindNoseButton">
-     <property name="text">
-      <string>Find nose</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="applyButton">
+    <widget class="ctkCollapsibleButton" name="downloaderModelCategord">
      <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Downloader Model</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
       <bool>false</bool>
      </property>
-     <property name="toolTip">
-      <string>Run the algorithm.</string>
+     <property name="collapsed">
+      <bool>true</bool>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QPushButton" name="downloadModelButton">
+        <property name="text">
+         <string>Download model</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="fileProcessCategory">
      <property name="text">
-      <string>Apply</string>
+      <string>File Process</string>
      </property>
+     <property name="collapsed">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Select file  to process</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="ctkPathLineEdit" name="FileButton"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="ProcessButton">
+        <property name="text">
+         <string>Process</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="FindNoseButton">
+        <property name="text">
+         <string>Find nose</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="applyButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="toolTip">
+         <string>Run the algorithm.</string>
+        </property>
+        <property name="text">
+         <string>Apply</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
@@ -72,9 +314,35 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>ctkCollapsibleButton</class>
+   <extends>QWidget</extends>
+   <header>ctkCollapsibleButton.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ctkMenuButton</class>
+   <extends>QPushButton</extends>
+   <header>ctkMenuButton.h</header>
+  </customwidget>
+  <customwidget>
    <class>ctkPathLineEdit</class>
    <extends>QWidget</extends>
    <header>ctkPathLineEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ctkSliderWidget</class>
+   <extends>QWidget</extends>
+   <header>ctkSliderWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLNodeComboBox</class>
+   <extends>QWidget</extends>
+   <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLSliderWidget</class>
+   <extends>ctkSliderWidget</extends>
+   <header>qMRMLSliderWidget.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLWidget</class>
@@ -82,7 +350,61 @@
    <header>qMRMLWidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>qMRMLSegmentationShow3DButton</class>
+   <extends>ctkMenuButton</extends>
+   <header>qMRMLSegmentationShow3DButton.h</header>
+  </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>septum_analysis</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>volumeNodeForCalculateVolume</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>157</x>
+     <y>155</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>112</x>
+     <y>52</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>septum_analysis</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>segmentationNodeForCalculateVolume</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>157</x>
+     <y>155</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>81</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>septum_analysis</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>tableNodeForCalculateVolume</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>159</x>
+     <y>157</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>159</x>
+     <y>165</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
