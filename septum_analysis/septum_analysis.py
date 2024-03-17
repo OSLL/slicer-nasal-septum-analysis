@@ -1,10 +1,6 @@
-import logging
 import os
 from typing import Annotated, Optional
 
-import vtk
-
-import slicer
 from septum_analysisLib import *
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
@@ -28,7 +24,11 @@ except:
     pip_install('numpy')
     import numpy as np
 
-from scripts.face_curvature import analyze_face_curvature
+try:
+    import nibabel as nib
+except:
+    pip_install('nibabel')
+    import nibabel as nib
 
 # from septum_detector import *
 
@@ -397,13 +397,23 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         min_coord = -100
         max_coord = 100
 
-        images = [cv2.imread(
-            os.path.join('/home/andreiegorych/study/slicer-nasal-septum-analysis/notebooks/output/slices',
-                         f"slice_{i}.png"),
-            cv2.IMREAD_GRAYSCALE)
-            for i in range(0, 240)]
+        input_volume = str(self.ui.FileButton.currentPath)
 
-        # print(images[0])
+        nii_img = nib.load(input_volume)
+        data = nii_img.get_fdata()
+        images = []
+
+        for i in range(data.shape[2]):
+            d = data[:,:,i]
+            d_min = np.min(d)
+            d_max = np.max(d)
+            if d_max!=d_min:
+                d = (d-d_min)/(d_max-d_min)*255
+            else:
+                d = d*0
+            images.append(d.astype(np.uint8))
+
+        images=np.array(images)
 
         low, high = self.logic.find_nose(images)
 
@@ -490,7 +500,7 @@ class septum_analysisLogic(ScriptedLoadableModuleLogic):
         logging.info(f'Processing completed in {stopTime-startTime:.2f} seconds')
 
 
-    def find_nose(self, images: [cv2.Mat]):
+    def find_nose(self, images: cv2.Mat):
         result, result1 = analyze_face_curvature(images)
         tr0_0 = np.quantile(result, 0.3)
         tr0_1 = np.quantile(result, 0.7)
