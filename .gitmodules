@@ -1,3 +1,6 @@
 [submodule "SlicerAutomatedDentalTools"]
 	path = SlicerAutomatedDentalTools
 	url = https://github.com/DCBIA-OrthoLab/SlicerAutomatedDentalTools.git
+[submodule "SlicerSegmentEditorExtraEffects"]
+	path = SlicerSegmentEditorExtraEffects
+	url = https://github.com/lassoan/SlicerSegmentEditorExtraEffects.git

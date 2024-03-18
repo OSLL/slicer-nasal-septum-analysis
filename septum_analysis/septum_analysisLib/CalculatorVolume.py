@@ -32,8 +32,8 @@ import SegmentEditorEffects
 
 
 class CalculatorVolume:
-    def __init__(self, applierLogic, defaultAutothresholdMethod):
-        self.isPreviewState = True
+    def __init__(self, applierLogic, defaultAutothresholdMethod, defaultPreviewState: bool):
+        self.isPreviewState = defaultPreviewState
         self.segmentEditorWidget = None
         self.segmentEditorNode: vtkMRMLSegmentEditorNode = None
         self.applierLogic = applierLogic

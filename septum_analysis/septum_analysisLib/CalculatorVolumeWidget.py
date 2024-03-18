@@ -29,7 +29,8 @@ class CalculatorVolumeWidget:
         applierLogic = ApplierLogicWithMask(UpdaterActionsOnProgressBar(self.ui))
         self.logic = CalculatorVolume(
             applierLogic,
-            SegmentEditorEffects.METHOD_TRIANGLE
+            SegmentEditorEffects.METHOD_TRIANGLE,
+            self.ui.isPreviewCheckBox.checked
         )
 
         self.ui.volumeNodeForCalculateVolume.connect(

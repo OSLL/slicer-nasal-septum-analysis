@@ -11,7 +11,7 @@ set(EXTENSION_DESCRIPTION "Extension for nasal septum analysis
 ")
 set(EXTENSION_ICONURL "https://www.example.com/Slicer/Extensions/nasal_septum_analysis.png")
 set(EXTENSION_SCREENSHOTURLS "https://www.example.com/Slicer/Extensions/nasal_septum_analysis/Screenshots/1.png")
-set(EXTENSION_DEPENDS "NA") # Specified as a list or "NA" if no dependencies
+set(EXTENSION_DEPENDS "SegmentEditorExtraEffects") # Specified as a list or "NA" if no dependencies
 
 #-----------------------------------------------------------------------------
 # Extension dependencies
@@ -21,6 +21,7 @@ include(${Slicer_USE_FILE})
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(septum_analysis)
+add_subdirectory(SegmentEditorLocalThreshold)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

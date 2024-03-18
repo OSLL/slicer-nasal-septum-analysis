@@ -1,12 +1,26 @@
-from SegmentEditorLocalThresholdLib import *
 from .CalculatorVolume import *
 from .PipelineApplierLogic import *
 
 
+def getLibModule():
+    from pathlib import Path
+    import imp
+    import sys
+    pathToSegmentEffect = Path(sys.modules['SegmentEditorLocalThreshold'].__file__)
+    pathToSegmentEffect = pathToSegmentEffect.parent.joinpath("SegmentEditorLocalThresholdLib/SegmentEditorEffect.py")
+    return imp.load_source(
+        'SegmentEditorLocalThresholdLib.SegmentEditorEffect',
+        pathToSegmentEffect.__str__()
+    )
+
+
+LocalThresholdLib = getLibModule()
+
+
 # Unfortunately, there is no unregistration function, so this effect can be seen in SegmentEditor
-class SelectingClosedSurfaceEditorEffect(SegmentEditorEffect):
+class SelectingClosedSurfaceEditorEffect(LocalThresholdLib.SegmentEditorEffect):
     def __init__(self, scriptedEffect):
-        SegmentEditorThresholdEffect.__init__(self, scriptedEffect)
+        LocalThresholdLib.SegmentEditorEffect.__init__(self, scriptedEffect)
         scriptedEffect.name = "Selecting Closed Surface"
         self.applyLogic = lambda ijkPoints: self.apply(ijkPoints)
 
