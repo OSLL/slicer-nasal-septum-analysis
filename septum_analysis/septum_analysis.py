@@ -1,10 +1,6 @@
-import logging
 import os
 from typing import Annotated, Optional
 
-import vtk
-
-import slicer
 from septum_analysisLib import *
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
@@ -12,6 +8,29 @@ from slicer.parameterNodeWrapper import (
     parameterNodeWrapper,
     WithinRange,
 )
+
+from slicer.util import pip_install
+
+
+try:
+    import cv2
+except:
+    pip_install('opencv-python')
+    import cv2
+
+try:
+    import numpy as np
+except:
+    pip_install('numpy')
+    import numpy as np
+
+try:
+    import nibabel as nib
+except:
+    pip_install('nibabel')
+    import nibabel as nib
+
+# from septum_detector import *
 
 from slicer import vtkMRMLScalarVolumeNode
 
@@ -161,6 +180,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.downloadModelButton.connect('clicked(bool)', self.onDownloadModelButton)
         # TODO: add process for self.ui.FileButton.
         self.ui.ProcessButton.connect('clicked(bool)', self.onProcessButton)
+        self.ui.FindNoseButton.connect('clicked(bool)', self.onFindNoseButton)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -370,6 +390,55 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         outputDirecotryObject.cleanup()
         temporaryDirectoryObject.cleanup()
 
+    def onFindNoseButton(self) -> None:
+        plane1 = vtk.vtkPlaneSource()
+        plane2 = vtk.vtkPlaneSource()
+
+        min_coord = -100
+        max_coord = 100
+
+        input_volume = str(self.ui.FileButton.currentPath)
+
+        nii_img = nib.load(input_volume)
+        data = nii_img.get_fdata()
+        images = []
+
+        for i in range(data.shape[2]):
+            d = data[:,:,i]
+            d_min = np.min(d)
+            d_max = np.max(d)
+            if d_max!=d_min:
+                d = (d-d_min)/(d_max-d_min)*255
+            else:
+                d = d*0
+            images.append(d.astype(np.uint8))
+
+        images=np.array(images)
+
+        low, high = self.logic.find_nose(images)
+
+        print(low, high)
+
+        low = (low / 240) * 200 - 100
+        high = (high / 240) * 200 - 100
+
+        plane1.SetOrigin(max_coord, max_coord, low)
+        plane1.SetPoint1(min_coord, max_coord, low)
+        plane1.SetPoint2(max_coord, min_coord, low)
+
+        plane2.SetOrigin(max_coord, max_coord, high)
+        plane2.SetPoint1(min_coord, max_coord, high)
+        plane2.SetPoint2(max_coord, min_coord, high)
+
+        boxNode = slicer.modules.models.logic().AddModel(plane1.GetOutputPort())
+        boxNode.GetDisplayNode().SetColor(1, 0, 0)
+        boxNode.GetDisplayNode().SetOpacity(0.8)
+
+        boxNode = slicer.modules.models.logic().AddModel(plane2.GetOutputPort())
+        boxNode.GetDisplayNode().SetColor(0, 1, 0)
+        boxNode.GetDisplayNode().SetOpacity(0.8)
+
+
 #
 # septum_analysisLogic
 #
@@ -429,6 +498,19 @@ class septum_analysisLogic(ScriptedLoadableModuleLogic):
 
         stopTime = time.time()
         logging.info(f'Processing completed in {stopTime-startTime:.2f} seconds')
+
+
+    def find_nose(self, images: cv2.Mat):
+        result, result1 = analyze_face_curvature(images)
+        tr0_0 = np.quantile(result, 0.3)
+        tr0_1 = np.quantile(result, 0.7)
+        # tr1 = np.quantile(result1, 0.5)
+        m = np.argmax(result)
+        intersections1 = np.argwhere(np.diff(np.sign(result - tr0_0))).flatten()
+        intersections2 = np.argwhere(np.diff(np.sign(result - tr0_1))).flatten()
+        place1 = np.searchsorted(intersections1, m)
+        place2 = np.searchsorted(intersections2, m)
+        return intersections1[place1 - 1], intersections2[place2]
 
 
 #

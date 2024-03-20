@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 septum_analysis/Resources/AMASSS_Models/
+/notebooks/output/*

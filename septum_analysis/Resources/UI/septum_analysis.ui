@@ -272,6 +272,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="FindNoseButton">
+        <property name="text">
+         <string>Find nose</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="applyButton">
         <property name="enabled">
          <bool>false</bool>
