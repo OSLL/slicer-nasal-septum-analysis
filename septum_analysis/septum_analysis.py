@@ -182,6 +182,8 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.ProcessButton.connect('clicked(bool)', self.onProcessButton)
         self.ui.FindNoseButton.connect('clicked(bool)', self.onFindNoseButton)
 
+        self.ui.ApplySobielTransformationsButton.connect('clicked(bool)', self.onApplySobielButton)
+
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
 
@@ -438,6 +440,42 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         boxNode.GetDisplayNode().SetColor(0, 1, 0)
         boxNode.GetDisplayNode().SetOpacity(0.8)
 
+
+    def onApplySobielButton(self) -> None:
+        input_volume = str(self.ui.FileButton.currentPath)
+
+        nii_img = nib.load(input_volume)
+        data = nii_img.get_fdata()
+
+        images = []
+
+        scale = 1
+        delta = 0
+        ddepth = cv2.CV_16S
+
+        for i in range(data.shape[2]):
+            image = data[:,:,i]
+            
+            image_gray = cv2.GaussianBlur(image, (3, 3), 0)
+            grad_x = cv2.Sobel(image_gray, ddepth, 1, 0, ksize=3, scale=scale, delta=delta, borderType=cv2.BORDER_DEFAULT)
+            grad_y = cv2.Sobel(image_gray, ddepth, 0, 1, ksize=3, scale=scale, delta=delta, borderType=cv2.BORDER_DEFAULT)
+            abs_grad_x = cv2.convertScaleAbs(grad_x)
+            abs_grad_y = cv2.convertScaleAbs(grad_y)
+            grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+
+            images.append(grad.astype(np.uint8))
+
+        images=np.array(images)
+
+        img = nib.Nifti1Image(images, np.eye(4))
+
+        img.header.get_xyzt_units()
+
+        output_filename = os.path.join(os.path.split(input_volume)[0], "sobiel.nii.gz")
+
+        img.to_filename(output_filename) 
+
+        slicer.util.loadVolume(output_filename)
 
 #
 # septum_analysisLogic
