@@ -279,6 +279,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="ApplySobielTransformationsButton">
+        <property name="text">
+         <string>Apply Sobiel transformation</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="applyButton">
         <property name="enabled">
          <bool>false</bool>
