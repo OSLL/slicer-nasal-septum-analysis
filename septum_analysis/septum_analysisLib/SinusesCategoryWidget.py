@@ -3,13 +3,13 @@ import vtk
 import qt
 from MRMLCorePython import vtkMRMLDisplayableNode
 
-from .CalculatorVolume import *
+from .SinusesManipulator import *
 from .SelectingClosedSurfaceEditorEffect import *
 from .utils import registerEditorEffect
 from .PipelineApplierLogic import UpdaterActionsOnProgressBar
 
 
-class CalculatorVolumeWidget:
+class SinusesCategoryWidget:
     def __init__(self) -> None:
         self.isEntered = False
         self.logic = None
@@ -18,12 +18,12 @@ class CalculatorVolumeWidget:
         self.ui = None
         self.getterSegmentName = None
 
-    def setup(self, uiCalculaterVolumeCategory) -> None:
+    def setup(self, ui) -> None:
         registerEditorEffect(__file__, 'SelectingClosedSurfaceEditorEffect.py')
 
         self.crosshairNode = slicer.util.getNode("Crosshair")
 
-        self.ui = uiCalculaterVolumeCategory
+        self.ui = ui
         self.ui.progressBarForCalculatorVolume.hide()
 
         applierLogic = ApplierLogicWithMask(UpdaterActionsOnProgressBar(self.ui))
@@ -34,31 +34,46 @@ class CalculatorVolumeWidget:
         )
 
         self.ui.volumeNodeForCalculateVolume.connect(
-            "currentNodeChanged(vtkMRMLNode*)", self.onVolumeChanged
+            'currentNodeChanged(vtkMRMLNode*)', self.onVolumeChanged
         )
         self.ui.segmentationNodeForCalculateVolume.connect(
-            "currentNodeChanged(vtkMRMLNode*)", self.onSegmentationChanged
+            'currentNodeChanged(vtkMRMLNode*)', self.onSegmentationChanged
         )
 
-        self.ui.thresholdOffset.connect("valueChanged(double)", lambda value: self.logic.setOffsetThreshold(value))
-        self.ui.isPreviewCheckBox.connect("clicked(bool)", lambda value: self.logic.setIsPreviewState(value))
+        self.ui.thresholdOffset.connect('valueChanged(double)', lambda value: self.logic.setOffsetThreshold(value))
+        self.ui.isPreviewCheckBox.connect('clicked(bool)', lambda value: self.logic.setIsPreviewState(value))
 
         self.ui.autothresholdMethod.addItem("Triangle", SegmentEditorEffects.METHOD_TRIANGLE)
         self.ui.autothresholdMethod.addItem("Kittler Illingworth", SegmentEditorEffects.METHOD_KITTLER_ILLINGWORTH)
         self.ui.autothresholdMethod.addItem("Otsu", SegmentEditorEffects.METHOD_OTSU)
         self.ui.autothresholdMethod.connect("currentIndexChanged(int)", self.onAutoThresholdChanged)
 
-        self.ui.leftSinusButton.setChecked(True)
-        self.setGetterSegmentName(ConstGetterNameSegment(self.ui.leftSinusButton.text))
+        class LambdaForChangeName:
+            def __init__(self, sinusesCategoryWidget, lineEdit):
+                self.lineEdit = lineEdit
+                sinusesCategoryWidget.ui.preparedNamesSinusesCategory.itemAt(i).widget().connect(
+                    'clicked(bool)',
+                    lambda: sinusesCategoryWidget.setGetterSegmentName(ConstGetterNameSegment(self.lineEdit.text))
+                )
 
-        self.ui.leftSinusButton.connect(
-            'clicked(bool)', lambda: self.setGetterSegmentName(ConstGetterNameSegment(self.ui.leftSinusButton.text))
-        )
-        self.ui.rightSinusButton.connect(
-            'clicked(bool)', lambda: self.setGetterSegmentName(ConstGetterNameSegment(self.ui.rightSinusButton.text))
+        widgetForFirstPrepareNameSinus = self.ui.maxillaryLeftSinus
+        widgetForFirstPrepareNameSinus.setChecked(True)
+        self.setGetterSegmentName(ConstGetterNameSegment(widgetForFirstPrepareNameSinus.text))
+        for i in range(self.ui.preparedNamesSinusesCategory.count()):
+            LambdaForChangeName(self, self.ui.preparedNamesSinusesCategory.itemAt(i).widget())
+
+        self.ui.customNameButton.connect(
+            'clicked(bool)', lambda: self.setGetterSegmentName(CustomGetterNameSegment(self.ui.customNameField))
         )
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
+
+        self.ui.boneContinuityTest.connect('clicked(bool)', lambda: self.logic.boneContinuityTest())
+        self.ui.clearBoneContinuityResults.connect('clicked(bool)', self.logic.clearBoneContinuityResults)
+        self.ui.choiceAxisForBone.insertItems(0, self.logic.axisNames)
+        self.ui.choiceAxisForBone.connect(
+            'currentIndexChanged(int)', lambda i: self.logic.changeAxis(i)
+        )
 
         self.enter()
 
@@ -86,9 +101,8 @@ class CalculatorVolumeWidget:
         if self.getterSegmentName is not None:
             self.getterSegmentName.disable()
         self.getterSegmentName = getterSegmentName
-        if self.getterSegmentName is not None:
-            self.getterSegmentName.enable()
-
+        self.getterSegmentName.enable()
+        self.getterSegmentName.onUpdateEffect = self.logic.setSegmentName
         self.logic.setSegmentName(getterSegmentName.get())
 
     def onAutoThresholdChanged(self, changedIndex: int):
@@ -97,7 +111,8 @@ class CalculatorVolumeWidget:
 
     @vtk.calldata_type(vtk.VTK_OBJECT)
     def onNodeAddedOnScene(self, caller, eventId, callData):
-        if not callData.IsA("vtkMRMLScalarVolumeNode"):
+        if not callData.IsA("vtkMRMLScalarVolumeNode") or slicer.mrmlScene.GetNodeByID(
+                callData.GetID()).GetName() == "__temp__":
             return
 
         # I would like to change only when the background change from there,
@@ -177,3 +192,24 @@ class ConstGetterNameSegment:
 
     def disable(self) -> None:
         pass
+
+
+class CustomGetterNameSegment:
+    def __init__(self, uiField) -> None:
+        self.uiField = uiField
+        self.onUpdateEffect = None
+
+        def onUpdateEffect(value):
+            if self.onUpdateEffect is not None:
+                self.onUpdateEffect(value)
+
+        self.uiField.textChanged.connect(onUpdateEffect)
+
+    def get(self) -> str:
+        return self.uiField.text
+
+    def enable(self) -> None:
+        self.uiField.setEnabled(True)
+
+    def disable(self) -> None:
+        self.uiField.setEnabled(False)

@@ -10,14 +10,14 @@
     <x>0</x>
     <y>0</y>
     <width>375</width>
-    <height>412</height>
+    <height>672</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="ctkCollapsibleButton" name="calculatorVolumeCategory">
+    <widget class="ctkCollapsibleButton" name="sinusesCategory">
      <property name="text">
-      <string>Calculator Volume</string>
+      <string>Sinuses Manipulator</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -115,7 +115,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+       <layout class="QHBoxLayout" name="previewLayout">
         <item>
          <widget class="qMRMLSegmentationShow3DButton" name="segmentationShow3DButton"/>
         </item>
@@ -132,46 +132,93 @@
        </layout>
       </item>
       <item>
-       <widget class="Line" name="line_2">
-        <property name="frameShadow">
-         <enum>QFrame::Plain</enum>
+       <layout class="QVBoxLayout" name="namesSegmentsForCalculateVolumeCategory">
+        <property name="spacing">
+         <number>0</number>
         </property>
-        <property name="midLineWidth">
-         <number>2</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="namesSegmentsForCalculateVolumeCategory" stretch="1,5">
         <item>
-         <widget class="QRadioButton" name="leftSinusButton">
-          <property name="text">
-           <string>Left Sinus</string>
+         <layout class="QGridLayout" name="preparedNamesSinusesCategory">
+          <property name="verticalSpacing">
+           <number>0</number>
           </property>
-         </widget>
+          <item row="2" column="1">
+           <widget class="QRadioButton" name="frontalRightSinus">
+            <property name="text">
+             <string>Frontal Right Sinus</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QRadioButton" name="sphenoidRightSinus">
+            <property name="text">
+             <string>Sphenoid Right Sinus</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QRadioButton" name="frontalLeftSinus">
+            <property name="text">
+             <string>Frontal Left Sinus</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="maxillaryLeftSinus">
+            <property name="text">
+             <string>Maxillary Left Sinus</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="maxillaryRightSinus">
+            <property name="text">
+             <string>Maxillary Right Sinus</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QRadioButton" name="sphenoidLeftSinus">
+            <property name="text">
+             <string>Sphenoid Left Sinus</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
-         <widget class="QRadioButton" name="rightSinusButton">
-          <property name="text">
-           <string>Right Sinus</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="customNameCategory">
+          <item>
+           <widget class="QRadioButton" name="customNameButton">
+            <property name="text">
+             <string>Custom</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="customNameField">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarForCalculatorVolume">
+        <property name="value">
+         <number>24</number>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="Line" name="line">
         <property name="frameShadow">
          <enum>QFrame::Plain</enum>
         </property>
-        <property name="midLineWidth">
+        <property name="lineWidth">
          <number>2</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
@@ -208,11 +255,39 @@
        </layout>
       </item>
       <item>
-       <widget class="QProgressBar" name="progressBarForCalculatorVolume">
-        <property name="value">
-         <number>24</number>
+       <widget class="Line" name="line_3">
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>2</number>
         </property>
        </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="boneContinuityTestLayout">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="ctkComboBox" name="choiceAxisForBone"/>
+          </item>
+          <item>
+           <widget class="QPushButton" name="boneContinuityTest">
+            <property name="text">
+             <string>Bone Continuity Test</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="clearBoneContinuityResults">
+          <property name="text">
+           <string>Clear Bone Continuity Results</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -322,6 +397,11 @@
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ctkComboBox</class>
+   <extends>QComboBox</extends>
+   <header>ctkComboBox.h</header>
   </customwidget>
   <customwidget>
    <class>ctkMenuButton</class>

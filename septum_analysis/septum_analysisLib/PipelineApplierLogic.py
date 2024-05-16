@@ -1,5 +1,5 @@
 import qt
-from .CalculatorVolume import *
+from .SinusesManipulator import *
 
 
 class PipelineApplierLogic:

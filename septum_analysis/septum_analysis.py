@@ -143,7 +143,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.logic = None
         self._parameterNode = None
         self._parameterNodeGuiTag = None
-        self.calculatorVolumeWidget = CalculatorVolumeWidget()
+        self.sinusesCategoryWidget = SinusesCategoryWidget()
 
     def setup(self) -> None:
         """
@@ -156,8 +156,8 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         uiWidget = slicer.util.loadUI(self.resourcePath('UI/septum_analysis.ui'))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
-        self.calculatorVolumeWidget.setup(
-            slicer.util.childWidgetVariables(self.ui.calculatorVolumeCategory)
+        self.sinusesCategoryWidget.setup(
+            slicer.util.childWidgetVariables(self.ui.sinusesCategory)
         )
 
         # Set scene in MRML widgets. Make sure that in Qt designer the top-level qMRMLWidget's
@@ -211,7 +211,7 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         Called when the application closes and the module widget is destroyed.
         """
         self.removeObservers()
-        self.calculatorVolumeWidget.cleanup()
+        self.sinusesCategoryWidget.cleanup()
 
     def enter(self) -> None:
         """
@@ -219,13 +219,13 @@ class septum_analysisWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         # Make sure parameter node exists and observed
         self.initializeParameterNode()
-        self.calculatorVolumeWidget.enter()
+        self.sinusesCategoryWidget.enter()
 
     def exit(self) -> None:
         """
         Called each time the user opens a different module.
         """
-        self.calculatorVolumeWidget.exit()
+        self.sinusesCategoryWidget.exit()
         # Do not react to parameter node changes (GUI will be updated when the user enters into the module)
         if self._parameterNode:
             self._parameterNode.disconnectGui(self._parameterNodeGuiTag)

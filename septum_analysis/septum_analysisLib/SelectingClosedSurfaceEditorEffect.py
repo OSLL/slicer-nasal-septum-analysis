@@ -1,4 +1,4 @@
-from .CalculatorVolume import *
+from .SinusesManipulator import *
 from .PipelineApplierLogic import *
 
 
@@ -115,7 +115,7 @@ class ApplierLogicWithMask:
         self.pipeline.addAction(returnMaskNodeAndRemoveMaskSegments)
         self.pipeline.addAction(EditorEffectAction('Islands', {
             'Operation': lambda _: SegmentEditorEffects.REMOVE_SMALL_ISLANDS,
-            'MinimumSize': lambda _: 3000,
+            'MinimumSize': lambda _: 1000,
         }))
         self.pipeline.addAction(EditorEffectAction('Smoothing', {
             'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,

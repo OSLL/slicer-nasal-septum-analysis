@@ -7,8 +7,8 @@ set(EXTENSION_DEPENDS "SegmentEditorLocalThreshold")
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   ${MODULE_NAME}Lib/__init__.py
-  ${MODULE_NAME}Lib/CalculatorVolume.py
-  ${MODULE_NAME}Lib/CalculatorVolumeWidget.py
+  ${MODULE_NAME}Lib/SinusesManipulator.py
+  ${MODULE_NAME}Lib/SinusesCategoryWidget.py
   ${MODULE_NAME}Lib/SelectingClosedSurfaceEditorEffect.py
   ${MODULE_NAME}Lib/PipelineApplierLogic.py
   ${MODULE_NAME}Lib/utils.py
