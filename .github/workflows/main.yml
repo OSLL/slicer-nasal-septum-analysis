@@ -5,11 +5,15 @@ on: workflow_dispatch
 jobs:
   pytest:
     runs-on: self-hosted
-    timeout-minutes: 1
-    container: kel.osll.ru:8083/docker/ubuntu:20.04
+    timeout-minutes: 10
+    container:
+      runs-on: slicer-base:5.6
+      volumes:
+        - :/mnt/storage/medicine/computer-tomography:/ct
     steps:
     - uses: actions/checkout@v3
     - name: Run tests
       run: |
+         ls /ct
          echo "ok"
       shell: bash
