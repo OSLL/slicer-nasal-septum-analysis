@@ -11,6 +11,8 @@ import numpy as np
 
 import argparse
 
+import pytest
+
 
 def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, remove_dicom_after_conversion):
     def traverse_ftp(conn: FTP, p: str):
@@ -40,7 +42,7 @@ def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, r
         nii_file_list.flush()
 
     os.makedirs(os.path.join(tmp_folder, 'converted'), exist_ok=True)
-    with open(os.path.join(tmp_folder, 'converted', 'list'), "w") as nii_file_list:
+    with open(os.path.join(tmp_folder, 'converted', 'list.txt'), "w") as nii_file_list:
         for folder in traverse_ftp(conn, entrypoint):
             local_folder = os.path.join(tmp_folder, folder)
 
@@ -90,14 +92,17 @@ def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, r
                         os.removedirs(local_folder)
                     print('nope')
 
-
-def test_on_nii(file_list: str, callback: Callable[[np.ndarray], None]):
+def get_nii_data(file_list: str):
     with open(file_list) as file:
         nii_files = [line.rstrip() for line in file]
-
+    
     for file in nii_files:
         nii_img = nib.load(file)
         data = nii_img.get_fdata()
+        yield data
+
+def run_on_nii(file_list: str, callback: Callable[[np.ndarray], None]):
+    for data in get_nii_data(file_list):
         callback(data)
 
 
@@ -105,7 +110,7 @@ def test_on_nii(file_list: str, callback: Callable[[np.ndarray], None]):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='used for testing functions on files in ftp database')
     parser.add_argument("mode", choices=['load', 'nii', 'dicom'],
-                        help='load - loads data from server; nii\dicom - test function on specified data')
+                        help='load - loads data from server; nii\\dicom - test function on specified data')
 
     parser.add_argument("--server", help='ftp server, default: \'kel.osll.ru\'', default='kel.osll.ru')
     parser.add_argument("--user", help='ftp user, default: \'storage\'', default='storage')
@@ -144,9 +149,14 @@ if __name__ == '__main__':
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
-        test_on_nii(args.file_list, getattr(mod, args.function_name))
+        run_on_nii(args.file_list, getattr(mod, args.function_name))
 
     elif args.mode == 'dicom':
         pass  # TODO
     else:
         exit(f"unknown option \'{args.mode}\'")
+
+def nii_test(param_name="data", file_list="./tmp/converted/list.txt"):
+    def wrapper(func):
+        return pytest.mark.parametrize(param_name, get_nii_data(file_list))(func)
+    return wrapper
