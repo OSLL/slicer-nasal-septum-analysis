@@ -67,6 +67,7 @@ class SinusesCategoryWidget:
         )
 
         self.ui.saveInTableButton.connect('clicked(bool)', self.onSaveInTable)
+        self.ui.exportSinusesVolumesToTable.connect('clicked(bool)', self.onExportAllSinusesVolumesToTable)
 
         self.ui.boneContinuityTest.connect('clicked(bool)', lambda: self.logic.boneContinuityTest())
         self.ui.clearBoneContinuityResults.connect('clicked(bool)', self.logic.clearBoneContinuityResults)
@@ -121,6 +122,9 @@ class SinusesCategoryWidget:
         self.ui.volumeNodeForCalculateVolume.setCurrentNodeID(callData.GetID())
 
     def onVolumeChanged(self):
+        if self.logic.isLogicRun:
+            return
+
         volumeNode = self.ui.volumeNodeForCalculateVolume.currentNode()
         if self.logic.volumeNode != volumeNode:
             self.logic.setVolumeNode(volumeNode)
@@ -175,9 +179,23 @@ class SinusesCategoryWidget:
             if isNeedSwitch3D:
                 self.ui.segmentationShow3DButton.clicked(False)
 
-            slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpTableView)
-            slicer.app.applicationLogic().GetSelectionNode().SetReferenceActiveTableID(tableNode.GetID())
-            slicer.app.applicationLogic().PropagateTableSelection()
+            self.showTable(tableNode)
+
+    def onExportAllSinusesVolumesToTable(self):
+        allSegmentations = slicer.util.getNodesByClass('vtkMRMLSegmentationNode')
+        allSegmentationsWithColumnNames = []
+        for node in allSegmentations:
+            allSegmentationsWithColumnNames.append((node.GetName()[len("Segmentation"):], node))
+        tableNode: vtkMRMLTableNode = self.ui.tableNodeForCalculateVolume.currentNode()
+        self.logic.exportSegmentationsToTable(allSegmentationsWithColumnNames, tableNode,
+                                              ['Maxillary Left Sinus', 'Maxillary Right Sinus'])
+        self.showTable(tableNode)
+
+    @staticmethod
+    def showTable(tableNode: vtkMRMLTableNode):
+        slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpTableView)
+        slicer.app.applicationLogic().GetSelectionNode().SetReferenceActiveTableID(tableNode.GetID())
+        slicer.app.applicationLogic().PropagateTableSelection()
 
 
 class ConstGetterNameSegment:

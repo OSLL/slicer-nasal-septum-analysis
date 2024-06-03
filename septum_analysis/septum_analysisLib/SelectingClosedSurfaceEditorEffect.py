@@ -49,9 +49,9 @@ class SelectingClosedSurfaceEditorEffect(LocalThresholdLib.SegmentEditorEffect):
 
 
 class ApplierLogicWithMask:
-    DEFAULT_MINIMUM_DIAMETER = 1.0
-    DEFAULT_CLOSING_SMOOTHING_SIZE = 1.5
-    DEFAULT_CLOSING_SMOOTHING_SIZE_FOR_END = 1.5
+    DEFAULT_MINIMUM_DIAMETER = 3.5
+    DEFAULT_CLOSING_SMOOTHING_SIZE = 1.0
+    DEFAULT_CLOSING_SMOOTHING_SIZE_FOR_END = 1.0
 
     class Data:
         def __init__(self, calculatorVolume: CalculatorVolume, ijkPoints):
@@ -86,10 +86,6 @@ class ApplierLogicWithMask:
             'MinimumThreshold': lambda data: data.threshold,
             'MaximumThreshold': lambda data: data.sourceVolumeMax,
         }))
-        self.pipeline.addAction(EditorEffectAction('Smoothing', {
-            'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
-            'KernelSizeMm': lambda _: self.closingSmoothingSize,
-        }))
         self.pipeline.addAction(EditorEffectAction('Logical operators', {
             'Operation': lambda _: SegmentEditorEffects.LOGICAL_INVERT,
         }))
@@ -100,11 +96,18 @@ class ApplierLogicWithMask:
             data.calculatorVolume.segmentEditorNode.SetMaskMode(vtkMRMLSegmentationNode.EditAllowedInsideSingleSegment)
 
         self.pipeline.addAction(changeCurrentNodeAndMaskNode)
+        # self.pipeline.addAction(EditorEffectAction('Smoothing', {
+        #     'SmoothingMethod': lambda _: SegmentEditorEffects.MORPHOLOGICAL_CLOSING,
+        #     'KernelSizeMm': lambda _: self.closingSmoothingSize,
+        # }))
         self.pipeline.addAction(EditorEffectAction('Selecting Closed Surface', {
             'MinimumThreshold': lambda data: data.sourceVolumeMin,
             'MaximumThreshold': lambda data: data.threshold,
-            'SegmentationAlgorithm': lambda data: 'GrowCut',
-            'MinimumDiameterMm': lambda data: self.minimumDiameter
+            'MinimumDiameterMm': lambda _: self.minimumDiameter,
+            # 'SegmentationAlgorithm': lambda _: 'GrowCut',
+            # TODO: ругается на то, что как-будто нет ImageData, хотя при GrowCut никогда не ругается
+            'SegmentationAlgorithm': lambda _: 'WaterShed',
+            'FeatureSizeMm': lambda _: 0.1,
         }, lambda data, effect: effect.self().apply(data.ijkPoints)))
 
         def returnMaskNodeAndRemoveMaskSegments(data: ApplierLogicWithMask.Data):

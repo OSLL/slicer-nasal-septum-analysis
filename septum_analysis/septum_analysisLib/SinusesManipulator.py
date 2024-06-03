@@ -13,7 +13,10 @@ except:
     import ruptures as rpt
 
 import vtkmodules.vtkCommonCore
-from typing import List
+from typing import (
+    List,
+    Tuple
+)
 
 import SegmentStatistics
 from .utils import (
@@ -65,6 +68,7 @@ import SegmentEditorEffects
 class CalculatorVolume:
     def __init__(self, applierLogic, defaultAutothresholdMethod, defaultPreviewState: bool):
         self.isPreviewState = defaultPreviewState
+        self.isLogicRun = False
         self.segmentEditorWidget = None
         self.segmentEditorNode: vtkMRMLSegmentEditorNode = None
         self.applierLogic = applierLogic
@@ -125,7 +129,7 @@ class CalculatorVolume:
         )
 
         LENGTH_BACK_CHECK_NORMAL = 0.1
-        LENGTH_FORWARD_CHECK_NORMAL = 3.8
+        LENGTH_FORWARD_CHECK_NORMAL = 2.5
 
         MIN_SIZE = 30
         STEP_VISUALIZE_RUPTURE = 5
@@ -189,7 +193,8 @@ class CalculatorVolume:
                 contoursPointsInfo = []
                 for contourIndex, contour in enumerate(contours):
                     contourSize = len(contour)
-                    if contourSize <= HALF_COUNT_NEIGHBOURS * 2 + 1 or contourSize <= MIN_SIZE * 2:
+                    min_size = MIN_SIZE if contourSize >= MIN_SIZE * 2 else MIN_SIZE / 2
+                    if contourSize <= HALF_COUNT_NEIGHBOURS * 2 + 1 or contourSize <= min_size * 2:
                         continue
 
                     def getRASFromIJKByAxis(x):
@@ -276,7 +281,8 @@ class CalculatorVolume:
                     maxIntensities = np.where(maxIntensities > upperThreshold, upperThreshold, maxIntensities)
                     pointsInfo = overallPointsInfo[segmentIndex][contourIndex]
 
-                    algo = rpt.KernelCPD(kernel="linear", min_size=MIN_SIZE).fit(maxIntensities)
+                    min_size = MIN_SIZE if contourSize >= MIN_SIZE * 2 else MIN_SIZE / 2
+                    algo = rpt.KernelCPD(kernel="linear", min_size=min_size).fit(maxIntensities)
 
                     bkps = algo.predict(pen=15000)
                     bkps.insert(0, 0)
@@ -284,13 +290,15 @@ class CalculatorVolume:
                     # At the end of bkps there is always the length of the original array
                     bkps[len(bkps) - 1] -= 1
 
-                    def visualize(indexInBkps):
+                    def visualize(indexInBkps, meanValue):
                         nonlocal contourFolder
                         startIndex = bkps[indexInBkps]
                         endIndex = bkps[indexInBkps + 1]
 
                         curveNode: vtkMRMLMarkupsCurveNode = slicer.mrmlScene.AddNewNodeByClass(
-                            "vtkMRMLMarkupsCurveNode", str(startIndex) + "-" + str(endIndex))
+                            "vtkMRMLMarkupsCurveNode",
+                            str(startIndex) + "-" + str(endIndex) + " (" + str(meanValue) + ")"
+                        )
                         if contourFolder is None:
                             contourFolder = shNode.CreateFolderItem(axisFolder, f'{segmentIndex}')
                         shNode.SetItemParent(shNode.GetItemByDataNode(curveNode), contourFolder)
@@ -314,9 +322,8 @@ class CalculatorVolume:
                         index = int(len(ruptureIntensities) * 0.1)
                         sortedIntensities = np.sort(ruptureIntensities)
                         meanInRuptureRange = np.mean(sortedIntensities[index:-index])
-                        # print("Mean in " + str(startIndex) + "-" + str(endIndex) + ": " + str(meanInRuptureRange))
                         if meanInRuptureRange < THRESHOLD_FOR_LOWER_RUPTURE:
-                            visualize(i)
+                            visualize(i, meanInRuptureRange)
 
                     # print(np.array2string(maxIntensities, separator=","))
                 # break
@@ -452,8 +459,10 @@ class CalculatorVolume:
             segmentation.AddEmptySegment(currentSegmentID, self.segmentName, segmentColor)
             self.segmentEditorNode.SetSelectedSegmentID(currentSegmentID)
 
+            self.isLogicRun = True
             self.applierLogic.apply(self, ijkPoints)
             self.tryChangeStateTool()
+            self.isLogicRun = False
 
         effect = self.segmentEditorWidget.activeEffect()
         effect.self().setApplyLogic(applyTool)
@@ -504,3 +513,50 @@ class CalculatorVolume:
         statisticsLogic.getParameterNode().SetParameter("Segmentation", self.segmentationNode.GetID())
         statisticsLogic.computeStatistics()
         statisticsLogic.exportToTable(tableNode, nonEmptyKeysOnly=True)
+
+    def exportSegmentationsToTable(self, segmentations: List[Tuple[str, vtkMRMLSegmentationNode]],
+                                   tableNode: vtkMRMLTableNode, rows: List[str]):
+        from math import nan
+
+        TRUE = str(True)
+        FALSE = str(False)
+        CLOSED_SURFACE_PLUGIN_NAME = "ClosedSurfaceSegmentStatisticsPlugin"
+        VOLUME_PARAMETER_NAME = "ClosedSurfaceSegmentStatisticsPlugin" + ".volume_cm3"
+
+        statisticsLogic: SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
+        statisticsLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter("ScalarVolumeSegmentStatisticsPlugin.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".surface_mm2.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".volume_mm3.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(VOLUME_PARAMETER_NAME + ".enabled", TRUE)
+
+        tableNode.RemoveAllColumns()
+        namesColumn = vtk.vtkStringArray()
+        namesColumn.SetName("Sinuses/Volume")
+        rowToIndex = {row: i for i, row in enumerate(rows)}
+        for row in rows:
+            namesColumn.InsertNextValue(row)
+        tableNode.AddColumn(namesColumn)
+
+        for columnName, segmentationNode in segmentations:
+            segmentationNode.CreateClosedSurfaceRepresentation()
+
+            statisticsLogic.getParameterNode().SetParameter("Segmentation", segmentationNode.GetID())
+            statisticsLogic.computeStatistics()
+
+            column = vtk.vtkFloatArray()
+            column.SetName(columnName)
+            column.SetNumberOfValues(len(rows))
+            for i in range(len(rows)):
+                column.InsertValue(i, nan)
+
+            stats = statisticsLogic.getStatistics()
+            for segmentId in stats["SegmentIDs"]:
+                segmentName = segmentationNode.GetSegmentation().GetSegment(segmentId).GetName()
+                index = rowToIndex.get(segmentName)
+                if index is None:
+                    continue
+                volume_cm3 = stats[segmentId, VOLUME_PARAMETER_NAME]
+                column.InsertValue(index, volume_cm3)
+
+            tableNode.AddColumn(column)
