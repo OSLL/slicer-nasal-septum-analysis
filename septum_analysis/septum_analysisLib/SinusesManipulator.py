@@ -1,10 +1,9 @@
-import logging
-
 import numpy as np
 import cv2
 import slicer.util
 import vtk
 import slicer
+from slicer.util import pip_install
 
 try:
     import ruptures as rpt
@@ -12,7 +11,6 @@ except:
     pip_install('ruptures')
     import ruptures as rpt
 
-import vtkmodules.vtkCommonCore
 from typing import (
     List,
     Tuple
@@ -26,41 +24,24 @@ from .utils import (
     createLineIterator
 )
 
-import inspect
 from vtkmodules.vtkCommonDataModel import (
-    vtkVector3d,
-    vtkImageData
+    vtkVector3d
 )
 from MRMLCorePython import vtkMRMLTableNode
-from SegmentEditor import SegmentEditorWidget
 from MRMLCorePython import (
     vtkMRMLSegmentationNode,
     vtkMRMLVolumeNode,
-    vtkMRMLScalarVolumeNode,
-    vtkMRMLScene,
-    vtkMRMLModelNode,
-    vtkMRMLTransformNode,
     vtkMRMLSubjectHierarchyNode
 )
 from vtkSegmentationCore import (
     vtkSegmentation,
-    vtkSegment,
-    vtkOrientedImageData
+    vtkSegment
 )
 from vtkSlicerMarkupsModuleMRMLPython import (
-    vtkMRMLMarkupsLineNode,
-    vtkMRMLMarkupsCurveNode,
-    vtkMRMLMarkupsFiducialNode
+    vtkMRMLMarkupsCurveNode
 )
 from vtkSlicerSegmentationsModuleMRMLPython import (
     vtkMRMLSegmentEditorNode
-)
-from SegmentEditor import SegmentEditorWidget
-from SegmentEditorEffects import (
-    AbstractScriptedSegmentEditorEffect,
-    SegmentEditorThresholdEffect,
-    SegmentEditorMarginEffect,
-    SegmentEditorIslandsEffect
 )
 import SegmentEditorEffects
 
@@ -124,7 +105,6 @@ class CalculatorVolume:
     def boneContinuityTest(self):
         from scipy.ndimage import (
             maximum_filter,
-            median_filter,
             uniform_filter
         )
 
@@ -501,7 +481,7 @@ class CalculatorVolume:
         self.segmentEditorWidget.setSegmentationNode(None)
         self.segmentEditorWidget.setSourceVolumeNode(None)
 
-    def saveResultsToTable(self, tableNode: vtkMRMLTableNode):
+    def checkValidExportToTable(self, tableNode: vtkMRMLTableNode):
         if self.segmentationNode is None:
             raise ValueError("Segmentation node not selected")
         if tableNode is None:
@@ -509,7 +489,23 @@ class CalculatorVolume:
         if self.segmentationNode.GetSegmentation().GetNumberOfSegments() == 0:
             raise ValueError("Segmentation node has zero number of segments")
 
-        statisticsLogic: SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
+    @staticmethod
+    def createAndPrepareStatisticsLogic() -> SegmentStatistics.SegmentStatisticsLogic:
+        TRUE = str(True)
+        FALSE = str(False)
+
+        statisticsLogic: SegmentStatistics.SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
+        statisticsLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter("ScalarVolumeSegmentStatisticsPlugin.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".surface_mm2.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".volume_mm3.enabled", FALSE)
+        statisticsLogic.getParameterNode().SetParameter(VOLUME_PARAMETER_NAME + ".enabled", TRUE)
+        return statisticsLogic
+
+    def saveResultsToTable(self, tableNode: vtkMRMLTableNode):
+        self.checkValidExportToTable(tableNode)
+
+        statisticsLogic = self.createAndPrepareStatisticsLogic()
         statisticsLogic.getParameterNode().SetParameter("Segmentation", self.segmentationNode.GetID())
         statisticsLogic.computeStatistics()
         statisticsLogic.exportToTable(tableNode, nonEmptyKeysOnly=True)
@@ -518,17 +514,8 @@ class CalculatorVolume:
                                    tableNode: vtkMRMLTableNode, rows: List[str]):
         from math import nan
 
-        TRUE = str(True)
-        FALSE = str(False)
-        CLOSED_SURFACE_PLUGIN_NAME = "ClosedSurfaceSegmentStatisticsPlugin"
-        VOLUME_PARAMETER_NAME = "ClosedSurfaceSegmentStatisticsPlugin" + ".volume_cm3"
-
-        statisticsLogic: SegmentStatisticsLogic = SegmentStatistics.SegmentStatisticsLogic()
-        statisticsLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.enabled", FALSE)
-        statisticsLogic.getParameterNode().SetParameter("ScalarVolumeSegmentStatisticsPlugin.enabled", FALSE)
-        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".surface_mm2.enabled", FALSE)
-        statisticsLogic.getParameterNode().SetParameter(CLOSED_SURFACE_PLUGIN_NAME + ".volume_mm3.enabled", FALSE)
-        statisticsLogic.getParameterNode().SetParameter(VOLUME_PARAMETER_NAME + ".enabled", TRUE)
+        self.checkValidExportToTable(tableNode)
+        statisticsLogic = self.createAndPrepareStatisticsLogic()
 
         tableNode.RemoveAllColumns()
         namesColumn = vtk.vtkStringArray()
@@ -560,3 +547,7 @@ class CalculatorVolume:
                 column.InsertValue(index, volume_cm3)
 
             tableNode.AddColumn(column)
+
+
+CLOSED_SURFACE_PLUGIN_NAME = "ClosedSurfaceSegmentStatisticsPlugin"
+VOLUME_PARAMETER_NAME = CLOSED_SURFACE_PLUGIN_NAME + ".volume_cm3"

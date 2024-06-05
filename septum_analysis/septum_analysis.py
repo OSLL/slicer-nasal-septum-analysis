@@ -1,7 +1,6 @@
 import os
 from typing import Annotated, Optional
 
-from septum_analysisLib import *
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from slicer.parameterNodeWrapper import (
@@ -34,6 +33,7 @@ except:
 
 from slicer import vtkMRMLScalarVolumeNode
 
+from septum_analysisLib import *
 
 #
 # septum_analysis
