@@ -13,6 +13,8 @@ import argparse
 
 import pytest
 
+RESULT_FILE_NAME = 'result.nii'
+CONVERTED_FOLDER_NAME = 'converted'
 
 def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, remove_dicom_after_conversion):
     def traverse_ftp(conn: FTP, p: str):
@@ -38,11 +40,11 @@ def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, r
                 yield p
 
     def add_to_nii_result(folder: str):
-        nii_file_list.write(os.path.join(os.path.abspath(folder), 'result.nii') + '\n')
+        nii_file_list.write(os.path.join(os.path.abspath(folder), RESULT_FILE_NAME) + '\n')
         nii_file_list.flush()
 
-    os.makedirs(os.path.join(tmp_folder, 'converted'), exist_ok=True)
-    with open(os.path.join(tmp_folder, 'converted', 'list.txt'), "w") as nii_file_list:
+    os.makedirs(os.path.join(tmp_folder, CONVERTED_FOLDER_NAME), exist_ok=True)
+    with open(os.path.join(tmp_folder, CONVERTED_FOLDER_NAME, 'list.txt'), "w") as nii_file_list:
         for folder in traverse_ftp(conn, entrypoint):
             local_folder = os.path.join(tmp_folder, folder)
 
@@ -52,7 +54,7 @@ def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, r
                 if folder.endswith('.nii'):
                     nii_folder = os.path.join(local_folder, 'nii')
                     os.makedirs(nii_folder)
-                    with open(os.path.join(nii_folder, 'result.nii'), 'wb') as f:
+                    with open(os.path.join(nii_folder, RESULT_FILE_NAME), 'wb') as f:
                         conn.retrbinary(f'RETR {folder}', f.write)
                     print()
                     print("!!!!!!!!!!FOUND NII!!!!!!!!!!")
@@ -73,7 +75,9 @@ def load_files_from_ftp(conn: FTP, entrypoint, tmp_folder, try_convert_to_nii, r
                 os.makedirs(nii_folder, exist_ok=True)
                 try:
                     print('converting to nii')
-                    dicom2nifti.dicom_series_to_nifti(local_folder, os.path.join(nii_folder, 'result.nii'))
+                    filename = os.path.join(nii_folder, RESULT_FILE_NAME)
+                    if not os.path.exists(filename):
+                        dicom2nifti.dicom_series_to_nifti(local_folder, filename)
                     if remove_dicom_after_conversion:
                         for file in os.listdir(local_folder):
                             if file.endswith('.dcm'):
@@ -152,7 +156,7 @@ if __name__ == '__main__':
         run_on_nii(args.file_list, getattr(mod, args.function_name))
 
     elif args.mode == 'dicom':
-        pass  # TODO
+        exit("dicom mode is not supported yet")  # TODO
     else:
         exit(f"unknown option \'{args.mode}\'")
 
