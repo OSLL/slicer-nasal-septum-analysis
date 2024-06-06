@@ -161,3 +161,5 @@ cython_debug/
 
 septum_analysis/Resources/AMASSS_Models/
 /notebooks/output/*
+*/tmp*
+septum_analysis/Testing/Python/tmp/*
